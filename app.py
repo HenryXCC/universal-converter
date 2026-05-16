@@ -58,15 +58,18 @@ class App(*_AppBases):
 
     # Icon
     def _set_icon(self):
-        icon_ico = os.path.join(os.path.dirname(sys.argv[0]), "icon.ico")
-        icon_png = os.path.join(os.path.dirname(sys.argv[0]), "icon.png")
+        base = os.path.dirname(os.path.abspath(__file__))
+        icon_ico = os.path.join(base, "assets", "icon.ico")
         try:
             if os.path.exists(icon_ico):
                 self.iconbitmap(icon_ico)
-            elif os.path.exists(icon_png):
-                icon  = Image.open(icon_png)
-                photo = ctk.CTkImage(light_image=icon, dark_image=icon, size=(32, 32))
-                self.iconphoto(True, photo)
+                try:
+                    from PIL import ImageTk
+                    img   = Image.open(icon_ico)
+                    photo = ImageTk.PhotoImage(img)
+                    self.iconphoto(True, photo)
+                except Exception:
+                    pass
         except Exception:
             pass
 
