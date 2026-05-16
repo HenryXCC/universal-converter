@@ -28,24 +28,18 @@
 ## 📸 Capturas de pantalla
 ---
 
+<div align="center">
 <table>
   <tr>
-    <td align="center">
-      <img src="./assets/image_tab_es.png" alt="Pestaña Imagen ES" width="400"/>
-      <p><strong>Pestaña Imagen</strong></p>
-    </td>
-    <td align="center">
-      <img src="./assets/video_tab_es.png" alt="Pestaña Video ES" width="400"/>
-      <p><strong>Pestaña Video</strong></p>
-    </td>
+    <td><img src="./assets/image_tab_es.png" alt="Pestaña Imagen" width="340"/></td>
+    <td><img src="./assets/video_tab_es.png" alt="Pestaña Video" width="340"/></td>
   </tr>
   <tr>
-    <td align="center">
-      <img src="./assets/youtube_tab_es.png" alt="Pestaña YouTube ES" width="400"/>
-      <p><strong>Pestaña YouTube</strong></p>
-    </td>
+    <td colspan="2" align="center"><img src="./assets/youtube_tab_es.png" alt="Pestaña YouTube" width="340"/></td>
   </tr>
 </table>
+<em>Pestaña Imagen · Pestaña Video · Pestaña YouTube</em>
+</div>
 
 ---
 
@@ -203,24 +197,18 @@ convertidor-universal/
 ## 📸 Screenshots
 ---
 
+<div align="center">
 <table>
   <tr>
-    <td align="center">
-      <img src="./assets/image_tab_en.png" alt="Image Tab EN" width="400"/>
-      <p><strong>Image Tab</strong></p>
-    </td>
-    <td align="center">
-      <img src="./assets/video_tab_en.png" alt="Video Tab EN" width="400"/>
-      <p><strong>Video Tab</strong></p>
-    </td>
+    <td><img src="./assets/image_tab_en.png" alt="Image Tab" width="340"/></td>
+    <td><img src="./assets/video_tab_en.png" alt="Video Tab" width="340"/></td>
   </tr>
   <tr>
-    <td align="center">
-      <img src="./assets/youtube_tab_en.png" alt="YouTube Tab EN" width="400"/>
-      <p><strong>YouTube Tab</strong></p>
-    </td>
+    <td colspan="2" align="center"><img src="./assets/youtube_tab_en.png" alt="YouTube Tab" width="340"/></td>
   </tr>
 </table>
+<em>Image Tab · Video Tab · YouTube Tab</em>
+</div>
 
 ---
 
