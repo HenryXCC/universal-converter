@@ -1,187 +1,14 @@
-# ◈ Convertidor Universal v1.4
+# ◈ Universal converter/Convertidor Universal
 
-> **ES** — Herramienta de escritorio para conversión de imágenes, videos y descarga de audio desde YouTube. Todo el procesamiento se realiza **localmente**, sin conexión a servidores externos.
->
 > **EN** — Desktop tool for converting images, videos, and downloading audio from YouTube. All processing is done **locally**, with no external server connections.
+> 
+> **ES** — Herramienta de escritorio para conversión de imágenes, videos y descarga de audio desde YouTube. Todo el procesamiento se realiza **localmente**, sin conexión a servidores externos.
+
 
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python)
 ![customtkinter](https://img.shields.io/badge/UI-customtkinter-orange)
 ![FFmpeg](https://img.shields.io/badge/Backend-FFmpeg-green)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
-
-> 💾 **Descargar ejecutable** / **Download executable**: [Releases](https://github.com/HenryXCC/universal-converter/releases)
-
----
-
-## ES — Español
-
-### Características
-
-- **🖼 Conversión de imágenes** — Convierte entre WebP, PNG, JPEG, BMP, TIFF, GIF e ICO. Soporta conversión por lotes, control de calidad y generación de GIFs animados con previsualización en tiempo real.
-- **🎬 Conversión de video** — Convierte entre MP4, AVI, MKV y MOV usando FFmpeg con barra de progreso en vivo y posibilidad de cancelar el proceso.
-- **▶ Descarga de audio de YouTube** — Descarga y extrae audio en MP3, M4A, OPUS, WAV, FLAC o AAC con vista previa de miniatura, título, canal y duración.
-- **🍪 Exportación de cookies** — Exporta cookies del navegador o usa un archivo cookies.txt para autenticación en YouTube (necesario cuando YouTube bloquea).
-- **🌐 Cambio de idioma en vivo** — Alterna entre español e inglés con un clic, sin cerrar ni reiniciar la aplicación. Los archivos cargados, el estado de la conversión y la carpeta de salida se conservan intactos.
-- **Interfaz oscura moderna** — Construida con `customtkinter`, escala de texto ajustable y soporte de arrastrar y soltar archivos (Drag & Drop).
-- **Configuración persistente** — Recuerda la carpeta de salida, el tamaño de fuente y el idioma entre sesiones (`config.json`).
-
-## 📸 Capturas de pantalla
----
-
-<img src="assets/image_tab_es.png" alt="Pestaña Imagen" width="920">
-
-<img src="assets/video_tab_es.png" alt="Pestaña Video" width="920">
-
-<img src="assets/youtube_tab_es.png" alt="Pestaña YouTube" width="920">
-
----
-
-
-### Requisitos previos
-
-**Python** — Versión **3.10 o superior**.
-
-**FFmpeg** (requerido para Video y YouTube) — FFmpeg y FFprobe deben estar instalados en el sistema y disponibles en el `PATH`.
-
-| Sistema | Comando |
-|---------|---------|
-| Windows | `winget install Gyan.FFmpeg` |
-| macOS   | `brew install ffmpeg` |
-| Linux   | `sudo apt install ffmpeg` |
-
-Descarga manual: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
-
----
-
-### Instalación
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/HenryXCC/universal-converter.git
-cd convertidor-universal
-
-# 2. (Recomendado) Crear entorno virtual
-python -m venv venv
-source venv/bin/activate        # macOS / Linux
-venv\Scripts\activate           # Windows
-
-# 3. Instalar dependencias
-pip install -r requirements.txt
-```
-
-### Uso
-
-```bash
-python main.py
-```
-
-Al iniciar, la app detecta automáticamente los binarios de FFmpeg disponibles en el sistema.
-
-**Pestaña YouTube — Cookies**
-
-Si YouTube bloquea las descargas, exporta las cookies de tu navegador desde la pestaña YouTube:
-1. Selecciona tu navegador en el menú desplegable.
-2. Haz clic en **"⬇ Exportar cookies ahora"**.
-3. También puedes cargar manualmente un archivo `cookies.txt` en formato Netscape.
-
-> ⚠ El navegador debe estar **completamente cerrado** antes de exportar las cookies, de lo contrario la base de datos estará bloqueada y la exportación fallará.
-
-**Pestaña Imagen**
-1. Haz clic en **"+ Agregar imágenes"** o arrastra archivos a la ventana.
-2. Selecciona el **formato de salida** y ajusta la **calidad** (para JPEG/WebP).
-3. Elige la **carpeta de destino** y pulsa **"⚡ CONVERTIR IMÁGENES"**.
-
-Para crear un **GIF animado**, selecciona el formato GIF, ordena los fotogramas con las flechas ↑↓ y ajusta el delay entre frames. La vista previa animada se actualiza en tiempo real.
-
-**Pestaña Video**
-1. Agrega uno o más archivos de video (o arrástralos a la ventana).
-2. Selecciona el **formato de salida**. Para conversión a GIF, ajusta los FPS con el control deslizante — la app te muestra automáticamente los FPS del video fuente y el valor recomendado.
-3. Pulsa **"⚡ CONVERTIR VIDEO(S)"**. Puedes cancelar el proceso en cualquier momento.
-
-**Pestaña YouTube**
-1. Pega la URL de un video de YouTube.
-2. Haz clic en **"🔍 Info"** para previsualizar el video (miniatura, canal, duración, vistas y likes).
-3. Elige el **formato de audio** y la **calidad en kbps**.
-4. Pulsa **"⬇ DESCARGAR AUDIO"**.
-
-**Cambio de idioma**
-
-Haz clic en el botón **`EN 🌐`** en la esquina superior derecha del header. La interfaz cambia al inglés al instante sin cerrar la app ni perder el trabajo en curso. Vuelve a hacer clic (`ES 🌐`) para regresar al español.
-
----
-
-### Ejecutar tests
-
-```bash
-python -m pytest tests.py -v
-```
-
-Requiere `pytest` instalado: `pip install pytest`
-
----
-
-### Crear ejecutable (.exe)
-
-Para distribuir la aplicación como ejecutable independiente, usa [PyInstaller](https://pyinstaller.org/):
-
-```bash
-# 1. Instalar PyInstaller (si no lo tienes)
-pip install pyinstaller
-
-# 2. Ejecutar el comando para crear el .exe
-pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
-
-El ejecutable se generará en la carpeta `dist/Convertidor Universal/`.
-```
----
-
-### Estructura del proyecto
-
-```bash
-convertidor-universal/
-├── main.py              # Punto de entrada (4 líneas)
-├── app.py               # Ventana principal, pestañas, DnD, idioma
-├── config.py            # Colores, fuentes, FFmpeg, dependencias opcionales
-├── i18n.py              # Sistema de traducción ES/EN
-├── utils.py             # FFprobe/FFmpeg, escala de fuente, utilidades
-├── widgets.py           # Componentes UI reutilizables
-├── tests.py             # Suite de tests (56 tests)
-├── tabs/
-│   ├── image_tab.py     # Pestaña Imagen
-│   ├── video_tab.py     # Pestaña Video
-│   └── youtube_tab.py   # Pestaña YouTube
-├── assets/
-│   ├── icon.ico         # Ícono de la aplicación
-│   ├── image_tab_es.png # Captura de pantalla ES
-│   ├── image_tab_en.png # Captura de pantalla EN
-│   ├── video_tab_es.png
-│   ├── video_tab_en.png
-│   ├── youtube_tab_es.png
-│   └── youtube_tab_en.png
-├── requirements.txt
-├── .gitignore
-├── LICENSE
-```
----
-
-### Dependencias
-
-| Paquete | Uso |
-|---------|-----|
-| `customtkinter` | Interfaz gráfica moderna |
-| `Pillow` | Procesamiento de imágenes |
-| `FFmpeg` / `FFprobe` | Conversión de video y audio (externo, no pip) |
-| `yt-dlp` | Descarga de YouTube |
-| `tkinterdnd2` | Drag & Drop de archivos |
-| `moviepy` | Detección de FFmpeg (fallback) |
-
----
-
-### Notas de compatibilidad
-
-- **Windows**: La ventana de consola se suprime automáticamente durante la conversión (`CREATE_NO_WINDOW`).
-- **macOS / Linux**: Compatible. Asegúrate de que FFmpeg esté en el `PATH`.
-- El archivo `config.json` se crea automáticamente en el directorio del proyecto al cerrar la aplicación.
 
 ---
 
@@ -360,6 +187,178 @@ convertidor-universal/
 
 Distributed under the **MIT** license. See the `LICENSE` file for details.
 Distribuido bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
+
+---
+
+## ES — Español
+
+### Características
+
+- **🖼 Conversión de imágenes** — Convierte entre WebP, PNG, JPEG, BMP, TIFF, GIF e ICO. Soporta conversión por lotes, control de calidad y generación de GIFs animados con previsualización en tiempo real.
+- **🎬 Conversión de video** — Convierte entre MP4, AVI, MKV y MOV usando FFmpeg con barra de progreso en vivo y posibilidad de cancelar el proceso.
+- **▶ Descarga de audio de YouTube** — Descarga y extrae audio en MP3, M4A, OPUS, WAV, FLAC o AAC con vista previa de miniatura, título, canal y duración.
+- **🍪 Exportación de cookies** — Exporta cookies del navegador o usa un archivo cookies.txt para autenticación en YouTube (necesario cuando YouTube bloquea).
+- **🌐 Cambio de idioma en vivo** — Alterna entre español e inglés con un clic, sin cerrar ni reiniciar la aplicación. Los archivos cargados, el estado de la conversión y la carpeta de salida se conservan intactos.
+- **Interfaz oscura moderna** — Construida con `customtkinter`, escala de texto ajustable y soporte de arrastrar y soltar archivos (Drag & Drop).
+- **Configuración persistente** — Recuerda la carpeta de salida, el tamaño de fuente y el idioma entre sesiones (`config.json`).
+
+## 📸 Capturas de pantalla
+---
+
+<img src="assets/image_tab_es.png" alt="Pestaña Imagen" width="920">
+
+<img src="assets/video_tab_es.png" alt="Pestaña Video" width="920">
+
+<img src="assets/youtube_tab_es.png" alt="Pestaña YouTube" width="920">
+
+---
+
+
+### Requisitos previos
+
+**Python** — Versión **3.10 o superior**.
+
+**FFmpeg** (requerido para Video y YouTube) — FFmpeg y FFprobe deben estar instalados en el sistema y disponibles en el `PATH`.
+
+| Sistema | Comando |
+|---------|---------|
+| Windows | `winget install Gyan.FFmpeg` |
+| macOS   | `brew install ffmpeg` |
+| Linux   | `sudo apt install ffmpeg` |
+
+Descarga manual: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+
+---
+
+### Instalación
+
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/HenryXCC/universal-converter.git
+cd convertidor-universal
+
+# 2. (Recomendado) Crear entorno virtual
+python -m venv venv
+source venv/bin/activate        # macOS / Linux
+venv\Scripts\activate           # Windows
+
+# 3. Instalar dependencias
+pip install -r requirements.txt
+```
+
+### Uso
+
+```bash
+python main.py
+```
+
+Al iniciar, la app detecta automáticamente los binarios de FFmpeg disponibles en el sistema.
+
+**Pestaña YouTube — Cookies**
+
+Si YouTube bloquea las descargas, exporta las cookies de tu navegador desde la pestaña YouTube:
+1. Selecciona tu navegador en el menú desplegable.
+2. Haz clic en **"⬇ Exportar cookies ahora"**.
+3. También puedes cargar manualmente un archivo `cookies.txt` en formato Netscape.
+
+> ⚠ El navegador debe estar **completamente cerrado** antes de exportar las cookies, de lo contrario la base de datos estará bloqueada y la exportación fallará.
+
+**Pestaña Imagen**
+1. Haz clic en **"+ Agregar imágenes"** o arrastra archivos a la ventana.
+2. Selecciona el **formato de salida** y ajusta la **calidad** (para JPEG/WebP).
+3. Elige la **carpeta de destino** y pulsa **"⚡ CONVERTIR IMÁGENES"**.
+
+Para crear un **GIF animado**, selecciona el formato GIF, ordena los fotogramas con las flechas ↑↓ y ajusta el delay entre frames. La vista previa animada se actualiza en tiempo real.
+
+**Pestaña Video**
+1. Agrega uno o más archivos de video (o arrástralos a la ventana).
+2. Selecciona el **formato de salida**. Para conversión a GIF, ajusta los FPS con el control deslizante — la app te muestra automáticamente los FPS del video fuente y el valor recomendado.
+3. Pulsa **"⚡ CONVERTIR VIDEO(S)"**. Puedes cancelar el proceso en cualquier momento.
+
+**Pestaña YouTube**
+1. Pega la URL de un video de YouTube.
+2. Haz clic en **"🔍 Info"** para previsualizar el video (miniatura, canal, duración, vistas y likes).
+3. Elige el **formato de audio** y la **calidad en kbps**.
+4. Pulsa **"⬇ DESCARGAR AUDIO"**.
+
+**Cambio de idioma**
+
+Haz clic en el botón **`EN 🌐`** en la esquina superior derecha del header. La interfaz cambia al inglés al instante sin cerrar la app ni perder el trabajo en curso. Vuelve a hacer clic (`ES 🌐`) para regresar al español.
+
+---
+
+### Ejecutar tests
+
+```bash
+python -m pytest tests.py -v
+```
+
+Requiere `pytest` instalado: `pip install pytest`
+
+---
+
+### Crear ejecutable (.exe)
+
+Para distribuir la aplicación como ejecutable independiente, usa [PyInstaller](https://pyinstaller.org/):
+
+```bash
+# 1. Instalar PyInstaller (si no lo tienes)
+pip install pyinstaller
+
+# 2. Ejecutar el comando para crear el .exe
+pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
+
+El ejecutable se generará en la carpeta `dist/Convertidor Universal/`.
+```
+---
+
+### Estructura del proyecto
+
+```bash
+convertidor-universal/
+├── main.py              # Punto de entrada (4 líneas)
+├── app.py               # Ventana principal, pestañas, DnD, idioma
+├── config.py            # Colores, fuentes, FFmpeg, dependencias opcionales
+├── i18n.py              # Sistema de traducción ES/EN
+├── utils.py             # FFprobe/FFmpeg, escala de fuente, utilidades
+├── widgets.py           # Componentes UI reutilizables
+├── tests.py             # Suite de tests (56 tests)
+├── tabs/
+│   ├── image_tab.py     # Pestaña Imagen
+│   ├── video_tab.py     # Pestaña Video
+│   └── youtube_tab.py   # Pestaña YouTube
+├── assets/
+│   ├── icon.ico         # Ícono de la aplicación
+│   ├── image_tab_es.png # Captura de pantalla ES
+│   ├── image_tab_en.png # Captura de pantalla EN
+│   ├── video_tab_es.png
+│   ├── video_tab_en.png
+│   ├── youtube_tab_es.png
+│   └── youtube_tab_en.png
+├── requirements.txt
+├── .gitignore
+├── LICENSE
+```
+---
+
+### Dependencias
+
+| Paquete | Uso |
+|---------|-----|
+| `customtkinter` | Interfaz gráfica moderna |
+| `Pillow` | Procesamiento de imágenes |
+| `FFmpeg` / `FFprobe` | Conversión de video y audio (externo, no pip) |
+| `yt-dlp` | Descarga de YouTube |
+| `tkinterdnd2` | Drag & Drop de archivos |
+| `moviepy` | Detección de FFmpeg (fallback) |
+
+---
+
+### Notas de compatibilidad
+
+- **Windows**: La ventana de consola se suprime automáticamente durante la conversión (`CREATE_NO_WINDOW`).
+- **macOS / Linux**: Compatible. Asegúrate de que FFmpeg esté en el `PATH`.
+- El archivo `config.json` se crea automáticamente en el directorio del proyecto al cerrar la aplicación.
 
 ---
 
