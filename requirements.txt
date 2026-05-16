@@ -1,0 +1,13 @@
+customtkinter>=5.2.0       # Framework de interfaz gráfica moderna
+Pillow>=10.0.0             # Procesamiento y conversión de imágenes
+yt-dlp>=2024.1.1           # Descarga de audio desde YouTube (tab YouTube)
+tkinterdnd2>=0.3.0         # Soporte de arrastrar y soltar archivos (Drag & Drop)
+moviepy>=1.0.3             # Detección automática del binario FFmpeg (fallback)
+
+# ─── Nota sobre FFmpeg ────────────────────────────────────────────────────────
+# FFmpeg y FFprobe son dependencias externas (no se instalan con pip).
+# Descarga desde: https://ffmpeg.org/download.html
+# O instala con:
+#   Windows (winget): winget install Gyan.FFmpeg
+#   macOS (Homebrew): brew install ffmpeg
+#   Linux (apt):      sudo apt install ffmpeg
