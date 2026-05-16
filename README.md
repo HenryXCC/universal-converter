@@ -343,5 +343,5 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más de
 
 ---
 
-*Developed as a portfolio project. All processing is local — no data is sent to external servers.*
-*Desarrollado como proyecto de portafolio. Todo el procesamiento es local — no se envía ningún dato a servidores externos.*
+*Developed as a portfolio project. All processing is local, no data is sent to the project's own servers. The YouTube tab communicates with YouTube's servers by design to fetch information and download content.*
+*Desarrollado como proyecto de portafolio. Todo el procesamiento es local, no se envía ningún dato a servidores propios del proyecto. La pestaña de YouTube se comunica con los servidores de YouTube por diseño para obtener información y descargar contenido.*
