@@ -28,18 +28,11 @@
 ## 📸 Capturas de pantalla
 ---
 
-<div align="center">
-<table>
-  <tr>
-    <td><img src="./assets/image_tab_es.png" alt="Pestaña Imagen" width="340"/></td>
-    <td><img src="./assets/video_tab_es.png" alt="Pestaña Video" width="340"/></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="./assets/youtube_tab_es.png" alt="Pestaña YouTube" width="340"/></td>
-  </tr>
-</table>
-<em>Pestaña Imagen · Pestaña Video · Pestaña YouTube</em>
-</div>
+<img src="assets/image_tab_es.png" alt="Pestaña Imagen" width="920">
+
+<img src="assets/video_tab_es.png" alt="Pestaña Video" width="920">
+
+<img src="assets/youtube_tab_es.png" alt="Pestaña YouTube" width="920">
 
 ---
 
@@ -197,18 +190,11 @@ convertidor-universal/
 ## 📸 Screenshots
 ---
 
-<div align="center">
-<table>
-  <tr>
-    <td><img src="./assets/image_tab_en.png" alt="Image Tab" width="340"/></td>
-    <td><img src="./assets/video_tab_en.png" alt="Video Tab" width="340"/></td>
-  </tr>
-  <tr>
-    <td colspan="2" align="center"><img src="./assets/youtube_tab_en.png" alt="YouTube Tab" width="340"/></td>
-  </tr>
-</table>
-<em>Image Tab · Video Tab · YouTube Tab</em>
-</div>
+<img src="assets/image_tab_en.png" alt="Image Tab" width="920">
+
+<img src="assets/video_tab_en.png" alt="Video Tab" width="920">
+
+<img src="assets/youtube_tab_en.png" alt="YouTube Tab" width="920">
 
 ---
 
