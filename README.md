@@ -51,6 +51,8 @@
 
 Descarga manual: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
 
+---
+
 ### Instalación
 
 ```bash
@@ -106,6 +108,8 @@ Para crear un **GIF animado**, selecciona el formato GIF, ordena los fotogramas 
 
 Haz clic en el botón **`EN 🌐`** en la esquina superior derecha del header. La interfaz cambia al inglés al instante sin cerrar la app ni perder el trabajo en curso. Vuelve a hacer clic (`ES 🌐`) para regresar al español.
 
+---
+
 ### Ejecutar tests
 
 ```bash
@@ -113,6 +117,8 @@ python -m pytest tests.py -v
 ```
 
 Requiere `pytest` instalado: `pip install pytest`
+
+---
 
 ### Crear ejecutable (.exe)
 
@@ -126,10 +132,12 @@ pip install pyinstaller
 pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
 
 El ejecutable se generará en la carpeta `dist/Convertidor Universal/`.
+```
+---
 
 ### Estructura del proyecto
 
-```
+```bash
 convertidor-universal/
 ├── main.py              # Punto de entrada (4 líneas)
 ├── app.py               # Ventana principal, pestañas, DnD, idioma
@@ -154,6 +162,7 @@ convertidor-universal/
 ├── .gitignore
 ├── LICENSE
 ```
+---
 
 ### Dependencias
 
@@ -165,6 +174,8 @@ convertidor-universal/
 | `yt-dlp` | Descarga de YouTube |
 | `tkinterdnd2` | Drag & Drop de archivos |
 | `moviepy` | Detección de FFmpeg (fallback) |
+
+---
 
 ### Notas de compatibilidad
 
@@ -211,6 +222,8 @@ convertidor-universal/
 
 Manual download: [https://ffmpeg.org/download.html](https://ffmpeg.org/download.html)
 
+---
+
 ### Installation
 
 ```bash
@@ -226,6 +239,7 @@ venv\Scripts\activate           # Windows
 # 3. Install dependencies
 pip install -r requirements.txt
 ```
+---
 
 ### Usage
 
@@ -266,6 +280,8 @@ To build an **animated GIF**, select the GIF format, reorder frames using the �
 
 Click the **`ES 🌐`** button in the top-right corner of the header. The interface switches to Spanish instantly, without closing the app or losing any work in progress. Click again (`EN 🌐`) to switch back to English.
 
+---
+
 ### Running tests
 
 ```bash
@@ -273,6 +289,8 @@ python -m pytest tests.py -v
 ```
 
 Requires `pytest` installed: `pip install pytest`
+
+---
 
 ### Building an executable (.exe)
 
@@ -286,10 +304,11 @@ pip install pyinstaller
 pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
 
 The executable will be generated in the `dist/Convertidor Universal/` folder.
+```
+---
 
 ### Project structure
-
-```
+```bash
 convertidor-universal/
 ├── main.py              # Entry point (4 lines)
 ├── app.py               # Main window, tabs, DnD, language
@@ -314,6 +333,7 @@ convertidor-universal/
 ├── .gitignore
 ├── LICENSE
 ```
+---
 
 ### Dependencies
 
@@ -325,6 +345,8 @@ convertidor-universal/
 | `yt-dlp` | YouTube downloading |
 | `tkinterdnd2` | File Drag & Drop |
 | `moviepy` | FFmpeg detection (fallback) |
+
+---
 
 ### Compatibility notes
 
