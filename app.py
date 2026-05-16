@@ -58,20 +58,27 @@ class App(*_AppBases):
 
     # Icon
     def _set_icon(self):
-        base = os.path.dirname(os.path.abspath(__file__))
-        icon_ico = os.path.join(base, "assets", "icon.ico")
-        try:
+        # Search for icon in multiple locations:
+        #   sys.argv[0] → when running as .exe (PyInstaller)
+        #   __file__    → when running as python main.py
+        candidates = [
+            os.path.join(os.path.dirname(sys.argv[0]), "assets", "icon.ico"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "icon.ico"),
+        ]
+        for icon_ico in candidates:
             if os.path.exists(icon_ico):
-                self.iconbitmap(icon_ico)
                 try:
-                    from PIL import ImageTk
-                    img   = Image.open(icon_ico)
-                    photo = ImageTk.PhotoImage(img)
-                    self.iconphoto(True, photo)
+                    self.iconbitmap(icon_ico)
+                    try:
+                        from PIL import ImageTk
+                        img   = Image.open(icon_ico)
+                        photo = ImageTk.PhotoImage(img)
+                        self.iconphoto(True, photo)
+                    except Exception:
+                        pass
+                    return
                 except Exception:
                     pass
-        except Exception:
-            pass
 
     # Config 
     def _load_config(self):

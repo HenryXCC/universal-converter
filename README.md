@@ -123,8 +123,7 @@ Para distribuir la aplicación como ejecutable independiente, usa [PyInstaller](
 pip install pyinstaller
 
 # 2. Ejecutar el comando para crear el .exe
-pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" main.py
-```
+pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
 
 El ejecutable se generará en la carpeta `dist/Convertidor Universal/`.
 
@@ -284,8 +283,7 @@ To distribute the application as a standalone executable, use [PyInstaller](http
 pip install pyinstaller
 
 # 2. Run the command to create the .exe
-pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" main.py
-```
+pyinstaller --onedir --windowed --clean --noconfirm --name "Convertidor Universal" --icon="assets/icon.ico" --add-data "assets/icon.ico;assets" main.py
 
 The executable will be generated in the `dist/Convertidor Universal/` folder.
 
