@@ -145,12 +145,15 @@ def run_ffmpeg(
             "FFmpeg not found. Install FFmpeg and ensure it is in the PATH."
         )
 
+    first_lines: list[str] = []
     tail: list[str] = []
     try:
         for raw in proc.stderr:
             line = raw.strip()
             if not line:
                 continue
+            if len(first_lines) < 30:
+                first_lines.append(line)
             tail.append(line)
             if len(tail) > 40:
                 tail.pop(0)
@@ -189,7 +192,11 @@ def run_ffmpeg(
         pass
 
     proc.wait()
-    return proc.returncode == 0, "\n".join(tail[-8:])
+    ok = proc.returncode == 0
+    if ok:
+        return True, ""
+    err_lines = first_lines[-15:] + tail[-15:]
+    return False, "\n".join(err_lines)
 
 
 # GIF FPS recommendation

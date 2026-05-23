@@ -338,6 +338,7 @@ class YouTubeTab(ctk.CTkFrame):
         self._thumb_ref      = None
         self._has_yt_info    = False
         self._cancel_flag    = threading.Event()
+        self._running        = False
         self._cookies_file   = ctk.StringVar(value="")
         self._tmp_cookie_file: str | None = None   # archivo temporal generado
         self._build()
@@ -537,6 +538,7 @@ class YouTubeTab(ctk.CTkFrame):
         self._btn_download.pack(side="left")
         self._btn_cancel = GhostButton(br2, text=t("cancel_btn"),
                                        command=self._cancel, height=44, width=120)
+        self._btn_cancel.configure(state="disabled")
         self._btn_cancel.pack(side="left", padx=12)
 
     # ── Exportación nativa de cookies ─────────────────────────────────────────
@@ -758,6 +760,8 @@ class YouTubeTab(ctk.CTkFrame):
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
+        self._running = True
+        self._btn_cancel.configure(state="normal")
         # Read StringVar values in the main thread before spawning daemon thread
         cookiefile = self._cookies_file.get().strip()
         browser    = self.browser_var.get()
@@ -767,6 +771,8 @@ class YouTubeTab(ctk.CTkFrame):
         if not YT_DLP_OK:
             self._log(t("yt_no_ytdlp"))
             self._done_progress(False)
+            self.after(0, lambda: self._btn_cancel.configure(state="disabled"))
+            self._running = False
             return
 
         out_dir    = self.out_dir.get()
@@ -832,8 +838,15 @@ class YouTubeTab(ctk.CTkFrame):
                 self._done_progress(False)
                 self._log(f"\n✗ {_clean}")
 
+        self.after(0, lambda: self._btn_cancel.configure(state="disabled"))
+        self._running = False
+
     def _cancel(self) -> None:
+        if not self._running:
+            return
         self._cancel_flag.set()
+        self._running = False
+        self._btn_cancel.configure(state="disabled")
         self._log(t("yt_cancelling"))
 
     def __del__(self):

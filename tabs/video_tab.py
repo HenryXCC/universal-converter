@@ -8,13 +8,14 @@ Correcciones aplicadas:
   - progress.set() desde el hilo de trabajo usa after() via helpers.
 """
 import os
+import re
 import threading
 
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
 from config import ACCENT, ACCENT2, BORDER, ERR, MUTED, TEXT, _VIDEO_CODEC
-from i18n import t
+from i18n import t, translate_ffmpeg_error
 from utils import (
     _reg, BODY, SMALL, HEAD,
     FFmpegNotFoundError, probe_video, run_ffmpeg, smart_gif_fps,
@@ -43,6 +44,7 @@ class VideoTab(ctk.CTkFrame):
         self._duration     = 0.0
         self._has_probe    = False
         self._cancel_flag  = threading.Event()
+        self._running = False
         self._build()
 
     # ── UI helpers (siempre hilo principal) ───────────────────────────────────
@@ -163,6 +165,7 @@ class VideoTab(ctk.CTkFrame):
         self._btn_convert.pack(side="left")
         self._btn_cancel = GhostButton(br, text=t("cancel_btn"),
                                        command=self._cancel, height=44, width=120)
+        self._btn_cancel.configure(state="disabled")
         self._btn_cancel.pack(side="left", padx=12)
 
     # ── Actualización de idioma en vivo ───────────────────────────────────────
@@ -312,6 +315,32 @@ class VideoTab(ctk.CTkFrame):
         if d:
             self.out_dir.set(d)
 
+    # ── Presentación de errores ──────────────────────────────────────────────
+    def _clean_ffmpeg_error(self, raw: str) -> str:
+        lines = raw.split("\n")
+        clean = []
+        seen_hints = set()
+        for line in lines:
+            cleaned = re.sub(r'@ [0-9a-fA-Fx]+', '', line).strip()
+            if not cleaned:
+                continue
+            if any(kw in cleaned.lower() for kw in
+                   ["error", "cannot", "failed", "nothing"]):
+                clean.append(cleaned)
+                hint = translate_ffmpeg_error(cleaned)
+                if hint and hint not in seen_hints:
+                    seen_hints.add(hint)
+                    clean.append(f"  → {hint}")
+            elif "Conversion failed" in cleaned:
+                clean.append(cleaned)
+                hint = translate_ffmpeg_error(cleaned)
+                if hint and hint not in seen_hints:
+                    seen_hints.add(hint)
+                    clean.append(f"  → {hint}")
+        return "\n".join(clean) if clean else "\n".join(
+            [l for l in lines if l.strip()][-3:]
+        )
+
     # ── Conversión ────────────────────────────────────────────────────────────
     def _start(self):
         if not self._files:
@@ -320,10 +349,16 @@ class VideoTab(ctk.CTkFrame):
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
+        self._running = True
+        self._btn_cancel.configure(state="normal")
         threading.Thread(target=self._convert, daemon=True).start()
 
     def _cancel(self):
+        if not self._running:
+            return
         self._cancel_flag.set()
+        self._running = False
+        self._btn_cancel.configure(state="disabled")
         self._log(t("vid_cancelling"))
 
     def _convert(self):
@@ -396,7 +431,8 @@ class VideoTab(ctk.CTkFrame):
                     self._log(f"✓ {_dest} ({_size:.2f} MB)")
                 else:
                     _tail = err_tail
-                    self._log(f"✗ Error: {_tail}")
+                    self._log(f"✗ Error:\n{self._clean_ffmpeg_error(_tail)}")
+                    success = False
 
             except FFmpegNotFoundError as e:
                 _e = str(e)
@@ -409,5 +445,10 @@ class VideoTab(ctk.CTkFrame):
                 success = False
 
         self._done_progress(success and not self._cancel_flag.is_set())
+        self.after(0, lambda: self._btn_cancel.configure(state="disabled"))
+        self._running = False
         _out = out_dir
-        self._log(t("vid_done", out_dir=_out))
+        if success and not self._cancel_flag.is_set():
+            self._log(t("vid_done", out_dir=_out))
+        else:
+            self._log(t("vid_failed"))

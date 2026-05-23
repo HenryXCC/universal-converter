@@ -112,6 +112,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_cancelling":     "⏹ Cancelando…",
         "vid_cancelled":      "⏹ Cancelado.",
         "vid_done":           "\nProceso finalizado → {out_dir}",
+        "vid_failed":         "\n✗ Error al convertir el video.",
+        "vid_mem_hint":       "\n💡 {fps} FPS genera demasiados fotogramas. Reduce los FPS o usa un video más corto.",
         "vid_processing":     "Procesando {cur}/{total}...",
 
         # hint de FPS con video cargado
@@ -183,6 +185,15 @@ _STRINGS: dict[str, dict[str, str]] = {
         "yt_cookiefile_label":         "O usar archivo cookies.txt manual:",
         "yt_cookiefile_hint":          "Selecciona un archivo cookies.txt en formato Netscape.",
         "yt_cookiefile_pick_title":    "Seleccionar archivo cookies.txt",
+
+        # FFmpeg error translations
+        "_ff_err_trans": {
+            "Cannot allocate memory": "Memoria insuficiente para procesar los fotogramas. Reduce los FPS o usa un video más corto.",
+            "Nothing was written into output file": "No se generó archivo de salida porque no se recibieron datos del video.",
+            "Conversion failed!": "La conversión con FFmpeg falló.",
+            "Error while filtering": "Error al aplicar filtros de video.",
+            "Task finished with error code": "La tarea de FFmpeg terminó con un código de error.",
+        },
     },
 
     # ENGLISH 
@@ -293,6 +304,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_cancelling":     "⏹ Cancelling…",
         "vid_cancelled":      "⏹ Cancelled.",
         "vid_done":           "\nProcess finished → {out_dir}",
+        "vid_failed":         "\n✗ Video conversion failed.",
+        "vid_mem_hint":       "\n💡 {fps} FPS generates too many frames. Lower the FPS or use a shorter video.",
         "vid_processing":     "Processing {cur}/{total}...",
 
         # FPS hint with loaded video
@@ -364,6 +377,9 @@ _STRINGS: dict[str, dict[str, str]] = {
         "yt_cookiefile_label":         "Or use a manual cookies.txt file:",
         "yt_cookiefile_hint":          "Select a cookies.txt file in Netscape format.",
         "yt_cookiefile_pick_title":    "Select cookies.txt file",
+
+        # FFmpeg error translations (empty — FFmpeg is already in English)
+        "_ff_err_trans": {},
     },
 }
 
@@ -392,3 +408,15 @@ def t(key: str, **kwargs) -> str:
         except Exception:
             pass
     return s
+
+
+def translate_ffmpeg_error(line: str) -> str:
+    """Si el idioma activo no es inglés, traduce frases comunes de error de
+    FFmpeg a mensajes amigables. Retorna cadena vacía si no hay traducción."""
+    trans = _STRINGS.get(_current_lang, {}).get("_ff_err_trans", {})
+    if not trans:
+        return ""
+    for eng, hint in trans.items():
+        if eng.lower() in line.lower():
+            return hint
+    return ""
