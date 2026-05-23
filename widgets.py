@@ -122,7 +122,7 @@ class ProgressCard(Card):
         self.label.configure(text=t("progress_ready"), text_color=MUTED)
 
     def refresh_lang(self) -> None:
-        """Traduce la etiqueta al idioma activo sin tocar el progreso dinámico."""
+        """Translates the label to the active language without touching dynamic progress."""
         if self._state == "ready":
             self.label.configure(text=t("progress_ready"), text_color=MUTED)
         elif self._state == "done_ok":

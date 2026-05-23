@@ -122,13 +122,13 @@ def run_ffmpeg(
     progress_cb=None,
     cancel_flag: threading.Event = None,
 ) -> tuple[bool, str]:
-    """Corre FFmpeg con reporte de progreso en vivo.
+    """Runs FFmpeg with live progress reporting.
 
     Returns:
-        (True, "")          si exitoso
-        (False, error_tail) si falló o fue cancelado
+        (True, "")          on success
+        (False, error_tail) on failure or cancellation
     Raises:
-        FFmpegNotFoundError si ffmpeg no está en el PATH.
+        FFmpegNotFoundError if ffmpeg is not in PATH.
     """
     cmd = [_cfg.FFMPEG, "-y", "-progress", "pipe:2"] + args
     try:

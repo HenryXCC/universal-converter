@@ -383,7 +383,7 @@ _STRINGS: dict[str, dict[str, str]] = {
     },
 }
 
-# Estado de idioma actual 
+# Current language state
 _current_lang: str = "es"
 
 
@@ -398,8 +398,8 @@ def get_lang() -> str:
 
 
 def t(key: str, **kwargs) -> str:
-    """Devuelve la cadena traducida al idioma activo.
-    Acepta kwargs para formatear la cadena con str.format().
+    """Returns the translated string for the active language.
+    Accepts kwargs to format the string with str.format().
     """
     s = _STRINGS.get(_current_lang, _STRINGS["es"]).get(key, key)
     if kwargs:
@@ -411,8 +411,8 @@ def t(key: str, **kwargs) -> str:
 
 
 def translate_ffmpeg_error(line: str) -> str:
-    """Si el idioma activo no es inglés, traduce frases comunes de error de
-    FFmpeg a mensajes amigables. Retorna cadena vacía si no hay traducción."""
+    """If the active language is not English, translates common FFmpeg error
+    phrases to user-friendly messages. Returns empty string if no translation."""
     trans = _STRINGS.get(_current_lang, {}).get("_ff_err_trans", {})
     if not trans:
         return ""

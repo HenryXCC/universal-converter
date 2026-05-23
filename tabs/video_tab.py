@@ -1,11 +1,11 @@
 """
-Pestaña de conversión de video.
+Video conversion tab.
 
-Correcciones aplicadas:
-  - Lambda capture bug en bucle: dest/size_mb/err_tail/e se capturan
-    con variables locales antes de pasar al after(), no por referencia.
-  - FFmpegNotFoundError se maneja explícitamente y muestra mensaje claro.
-  - progress.set() desde el hilo de trabajo usa after() via helpers.
+Applied fixes:
+  - Lambda capture bug in loop: dest/size_mb/err_tail/e are captured
+    as local variables before passing to after(), not by reference.
+  - FFmpegNotFoundError is handled explicitly and shows a clear message.
+  - progress.set() from worker thread uses after() via helpers.
 """
 import os
 import re
@@ -47,7 +47,7 @@ class VideoTab(ctk.CTkFrame):
         self._running = False
         self._build()
 
-    # ── UI helpers (siempre hilo principal) ───────────────────────────────────
+    # UI helpers (main thread only)
     def _log(self, msg: str) -> None:
         self.after(0, lambda m=msg: self.log.append(m))
 
@@ -57,7 +57,7 @@ class VideoTab(ctk.CTkFrame):
     def _done_progress(self, ok: bool) -> None:
         self.after(0, lambda o=ok: self.progress.done(o))
 
-    # ── Construcción de la UI ─────────────────────────────────────────────────
+    # Build UI
     def _build(self):
         self._lbl_title = _reg(
             ctk.CTkLabel(self, text=t("vid_title"), font=HEAD(), text_color=ACCENT), "head"
@@ -68,7 +68,7 @@ class VideoTab(ctk.CTkFrame):
         )
         self._lbl_subtitle.pack(pady=(0, 20))
 
-        # Entrada
+        # Input
         fc = Card(self)
         fc.pack(fill="x", padx=30, pady=6)
         self._lbl_input_section = SectionLabel(fc, text=t("vid_input_section"))
@@ -84,7 +84,7 @@ class VideoTab(ctk.CTkFrame):
         )
         self.file_label.pack(side="left", padx=14)
 
-        # Información
+        # Info
         ic = Card(self)
         ic.pack(fill="x", padx=30, pady=6)
         self._lbl_info_section = SectionLabel(ic, text=t("vid_info_section"))
@@ -95,7 +95,7 @@ class VideoTab(ctk.CTkFrame):
         )
         self.info_lbl.pack(anchor="w", padx=16, pady=(0, 14))
 
-        # Opciones
+        # Options
         oc = Card(self)
         oc.pack(fill="x", padx=30, pady=6)
         self._lbl_options = SectionLabel(oc, text=t("options_section"))
@@ -109,7 +109,7 @@ class VideoTab(ctk.CTkFrame):
             text_color=TEXT, font=BODY(), width=200,
         ).pack(side="left")
 
-        # Control FPS para GIF
+        # FPS control for GIF
         self._fps_wrapper = ctk.CTkFrame(oc, fg_color="transparent")
         self._fps_wrapper.pack(fill="x", padx=16, pady=(0, 4))
         fpr = ctk.CTkFrame(self._fps_wrapper, fg_color="transparent")
@@ -138,7 +138,7 @@ class VideoTab(ctk.CTkFrame):
         )
         self.fps_hint.pack(anchor="w", pady=(4, 0))
 
-        # Carpeta de salida
+        # Output folder
         or3 = ctk.CTkFrame(oc, fg_color="transparent")
         or3.pack(fill="x", padx=16, pady=(8, 14))
         self._lbl_outdir = _reg(
@@ -153,7 +153,7 @@ class VideoTab(ctk.CTkFrame):
         self._btn_browse.pack(side="left")
         self.conv_var.trace_add("write", self._on_conv_change)
 
-        # Progreso, log, botones
+        # Progress, log, buttons
         self.progress = ProgressCard(self)
         self.progress.pack(fill="x", padx=30, pady=6)
         self.log = LogBox(self, height=130)
@@ -168,7 +168,7 @@ class VideoTab(ctk.CTkFrame):
         self._btn_cancel.configure(state="disabled")
         self._btn_cancel.pack(side="left", padx=12)
 
-    # ── Actualización de idioma en vivo ───────────────────────────────────────
+    # Live language update
     def refresh_lang(self) -> None:
         self._lbl_title.configure(text=t("vid_title"))
         self._lbl_subtitle.configure(text=t("vid_subtitle"))
@@ -188,7 +188,7 @@ class VideoTab(ctk.CTkFrame):
         self._btn_cancel.configure(text=t("cancel_btn"))
         self.progress.refresh_lang()
 
-    # ── Cambio de conversión ──────────────────────────────────────────────────
+    # Conversion change
     def _on_conv_change(self, *_):
         src_ext, ext = self.CONVERSIONS[self.conv_var.get()]
         if ext == "gif":
@@ -209,7 +209,7 @@ class VideoTab(ctk.CTkFrame):
                 self.file_label.configure(text=t("vid_no_file"), text_color=MUTED)
                 self.info_lbl.configure(text=t("vid_info_hint"), text_color=MUTED)
 
-    # ── Hint de FPS ───────────────────────────────────────────────────────────
+    # FPS hint
     def _update_fps_hint(self):
         fps = self.fps_var.get()
         if self._src_fps > 0:
@@ -228,7 +228,7 @@ class VideoTab(ctk.CTkFrame):
         else:
             self.fps_hint.configure(text=t("vid_fps_hint_general"), text_color=MUTED)
 
-    # ── Gestión de archivos ───────────────────────────────────────────────────
+    # File management
     def _src_ext(self) -> str:
         """Returns the expected source extension for the current conversion."""
         src, _ = self.CONVERSIONS[self.conv_var.get()]
@@ -315,7 +315,7 @@ class VideoTab(ctk.CTkFrame):
         if d:
             self.out_dir.set(d)
 
-    # ── Presentación de errores ──────────────────────────────────────────────
+    # Error presentation
     def _clean_ffmpeg_error(self, raw: str) -> str:
         lines = raw.split("\n")
         clean = []
@@ -341,7 +341,7 @@ class VideoTab(ctk.CTkFrame):
             [l for l in lines if l.strip()][-3:]
         )
 
-    # ── Conversión ────────────────────────────────────────────────────────────
+    # Conversion
     def _start(self):
         if not self._files:
             messagebox.showwarning(t("vid_warn_title"), t("vid_warn_msg"))
@@ -424,7 +424,7 @@ class VideoTab(ctk.CTkFrame):
                     self._log(t("vid_cancelled"))
                     break
 
-                # FIX: captura de variables de bucle ANTES del after()
+                # FIX: capture loop variables BEFORE after()
                 if ok:
                     _dest   = dest
                     _size   = os.path.getsize(dest) / (1024 * 1024)

@@ -1,10 +1,10 @@
 """
-Pestaña de conversión de imágenes.
+Image conversion tab.
 
-Correcciones aplicadas:
-  - Toda llamada a widgets desde hilos worker usa self.after() — hilo principal siempre.
-  - _convert_animated_gif: progress.set() y log.append() son thread-safe.
-  - _convert: progress.set() y log.append() son thread-safe.
+Applied fixes:
+  - All widget calls from worker threads use self.after() — main thread only.
+  - _convert_animated_gif: progress.set() and log.append() are thread-safe.
+  - _convert: progress.set() and log.append() are thread-safe.
 """
 import os
 import threading
@@ -41,7 +41,7 @@ class ImageTab(ctk.CTkFrame):
         self._preview_idx = 0
         self._build()
 
-    # ── UI helpers (siempre hilo principal) ───────────────────────────────────
+    # UI helpers (main thread only)
     def _log(self, msg: str) -> None:
         self.after(0, lambda: self.log.append(msg))
 
@@ -51,7 +51,7 @@ class ImageTab(ctk.CTkFrame):
     def _done_progress(self, ok: bool) -> None:
         self.after(0, lambda: self.progress.done(ok))
 
-    # ── Construcción de la UI ─────────────────────────────────────────────────
+    # Build UI
     def _build(self):
         self._lbl_title = _reg(
             ctk.CTkLabel(self, text=t("img_title"), font=HEAD(), text_color=ACCENT), "head"
@@ -62,7 +62,7 @@ class ImageTab(ctk.CTkFrame):
         )
         self._lbl_subtitle.pack(pady=(0, 20))
 
-        # Opciones
+        # Options
         oc = Card(self)
         oc.pack(fill="x", padx=30, pady=6)
         self._lbl_options = SectionLabel(oc, text=t("options_section"))
@@ -109,7 +109,7 @@ class ImageTab(ctk.CTkFrame):
         self._btn_browse = GhostButton(or2, text=t("browse"), width=110, command=self._pick_outdir)
         self._btn_browse.pack(side="left")
 
-        # Secciones de entrada
+        # Input sections
         self._input_container = ctk.CTkFrame(self, fg_color="transparent")
         self._input_container.pack(fill="x")
         self._normal_section = self._build_normal_section()
@@ -117,7 +117,7 @@ class ImageTab(ctk.CTkFrame):
         self._normal_section.pack(fill="x", padx=30, pady=6)
         self.fmt_var.trace_add("write", self._on_fmt_change)
 
-        # Progreso, log, botón
+        # Progress, log, button
         self.progress = ProgressCard(self)
         self.progress.pack(fill="x", padx=30, pady=6)
         self.log = LogBox(self, height=110)
@@ -189,8 +189,8 @@ class ImageTab(ctk.CTkFrame):
             fg_color="#0A0A0B", corner_radius=6, font=SMALL(), text_color=MUTED,
         )
         self._preview_lbl.pack(padx=6, pady=(0, 4))
-        # Imagen en blanco usada para limpiar el preview sin pasar image=None,
-        # que deja CTkLabel en un estado interno roto y ya no muestra nada.
+        # Blank image used to clear preview without passing image=None,
+        # which leaves CTkLabel in a broken internal state.
         _blank_pil = Image.new("RGB", (186, 115), color=(10, 10, 11))
         self._blank_prev_img = ctk.CTkImage(
             light_image=_blank_pil, dark_image=_blank_pil, size=(186, 115)
@@ -231,7 +231,7 @@ class ImageTab(ctk.CTkFrame):
         self._chk_loop.pack(side="left")
         return gc
 
-    # ── Actualización de idioma en vivo ───────────────────────────────────────
+    # Live language update
     def refresh_lang(self) -> None:
         self._lbl_title.configure(text=t("img_title"))
         self._lbl_subtitle.configure(text=t("img_subtitle"))
@@ -261,7 +261,7 @@ class ImageTab(ctk.CTkFrame):
             if not self._files:
                 self._preview_lbl.configure(text=t("img_no_images"))
 
-    # ── Cambio de formato ─────────────────────────────────────────────────────
+    # Format change
     def _on_fmt_change(self, *_):
         # Drop any files whose extension matches the new destination format
         allowed = self._allowed_exts()
@@ -293,7 +293,7 @@ class ImageTab(ctk.CTkFrame):
             self._normal_section.pack(fill="x", padx=30, pady=6)
             self._refresh_normal_list()
 
-    # ── Gestión de archivos ───────────────────────────────────────────────────
+    # File management
     # All supported source extensions, mapped from internal format key to file globs
     _FMT_EXTS = {
         "WEBP": (".webp",),
@@ -367,7 +367,7 @@ class ImageTab(ctk.CTkFrame):
         self._refresh_normal_list()
         if self.fmt_var.get() == "GIF":
             self._refresh_gif_list()
-            # FIX: image=None deja CTkLabel en estado roto; usar imagen en blanco.
+            # FIX: image=None breaks CTkLabel; use blank image instead.
             self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
             self._preview_stats.configure(text=t("img_frames_zero"))
 
@@ -378,7 +378,7 @@ class ImageTab(ctk.CTkFrame):
                 lst.insert(target, lst.pop(idx))
             self._refresh_gif_list()
             self._preview_idx = 0
-            # FIX: reiniciar el preview por si estaba detenido tras una operación previa.
+            # FIX: restart preview in case it was stopped after a previous operation.
             self._start_preview()
 
     def _remove(self, idx: int):
@@ -387,15 +387,15 @@ class ImageTab(ctk.CTkFrame):
         self._refresh_gif_list()
         if not self._files:
             self._stop_preview()
-            # FIX: image=None deja CTkLabel en estado roto; usar imagen en blanco.
+            # FIX: image=None breaks CTkLabel; use blank image instead.
             self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
             self._preview_stats.configure(text=t("img_frames_zero"))
         else:
             self._preview_idx = 0
-            # FIX: reiniciar el preview por si estaba detenido.
+            # FIX: restart preview in case it was stopped.
             self._start_preview()
 
-    # ── Refresco de listas ────────────────────────────────────────────────────
+    # List refresh
     def _refresh_normal_list(self):
         self.file_list.configure(state="normal")
         self.file_list.delete("0.0", "end")
@@ -426,7 +426,7 @@ class ImageTab(ctk.CTkFrame):
             text=t("img_frames_total", n=n, secs=n * self._frame_dur_var.get() / 1000)
         )
 
-    # ── Vista previa animada ──────────────────────────────────────────────────
+    # Animated preview
     def _restart_preview(self):
         self._preview_idx = 0
         self._start_preview()
@@ -457,7 +457,7 @@ class ImageTab(ctk.CTkFrame):
         if d:
             self.out_dir.set(d)
 
-    # ── Conversión ────────────────────────────────────────────────────────────
+    # Conversion
     def _start(self):
         if not self._files:
             messagebox.showwarning(t("img_warn_title"), t("img_warn_msg"))
@@ -477,8 +477,8 @@ class ImageTab(ctk.CTkFrame):
 
         quality = self.quality_var.get()
         errors  = 0
-        # FIX: snapshot para evitar RuntimeError si el usuario hace Clear mientras
-        # la conversión corre en el hilo daemon (list changed size during iteration).
+        # FIX: snapshot to avoid RuntimeError if user clears during conversion
+        # (list changed size during iteration).
         files = list(self._files)
         total = len(files)
         for i, path in enumerate(files):
@@ -490,8 +490,8 @@ class ImageTab(ctk.CTkFrame):
                     img = img.convert("RGB")
                 kw = {"quality": quality} if fmt in ("WEBP", "JPEG") else {}
                 img.save(dest, fmt, **kw)
-                # FIX: captura explícita de stem/ext para que la lambda no use
-                # la variable del bucle por referencia
+                # FIX: capture stem/ext explicitly so the lambda doesn't capture
+                # the loop variable by reference
                 _stem, _ext = stem, self.EXT[fmt]
                 self._log(f"✓  {_stem}{_ext}")
             except Exception as e:
@@ -509,7 +509,7 @@ class ImageTab(ctk.CTkFrame):
         self._log(t(key, ok=ok, total=total, out_dir=out_dir))
 
     def _convert_animated_gif(self, out_dir: str):
-        # FIX: snapshot para evitar race condition si el usuario hace Clear durante la conversión.
+        # FIX: snapshot to avoid race condition if user clears during conversion.
         files = list(self._files)
         self._log(t("img_gif_building", n=len(files)))
         imgs  = []

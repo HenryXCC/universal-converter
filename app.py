@@ -319,7 +319,7 @@ class App(*_AppBases):
 
     # Live language change
     def _change_lang(self) -> None:
-        """Cambia el idioma al instante sin cerrar ni reiniciar la app."""
+        """Switches language instantly without closing or restarting the app."""
         new_lang = "en" if get_lang() == "es" else "es"
         set_lang(new_lang)
 
