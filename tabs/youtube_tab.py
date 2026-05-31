@@ -670,8 +670,10 @@ class YouTubeTab(ctk.CTkFrame):
 
     # URL validation
     def _is_youtube_url(self, url: str) -> bool:
-        return (("youtube.com" in url or "youtu.be" in url)
-                and ("watch" in url or "youtu.be/" in url))
+        # Accepts: watch, Shorts, Live, Playlists, youtu.be short links
+        return bool(re.search(
+            r'(youtube\.com/(watch|shorts|live|playlist)|youtu\.be/)', url
+        ))
 
     # Video info
     def _fetch_info(self) -> None:
@@ -757,17 +759,27 @@ class YouTubeTab(ctk.CTkFrame):
         if not self._is_youtube_url(url):
             messagebox.showwarning(t("yt_warn_invalid_title"), t("yt_warn_invalid_msg"))
             return
+        if self._running:           # guard: prevent double-start while winding down
+            return
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
         self._running = True
         self._btn_cancel.configure(state="normal")
-        # Read StringVar values in the main thread before spawning daemon thread
+        # Read ALL StringVars in the main thread — Tkinter StringVar.get() is not thread-safe.
         cookiefile = self._cookies_file.get().strip()
         browser    = self.browser_var.get()
-        threading.Thread(target=self._download, args=(url, cookiefile, browser), daemon=True).start()
+        out_dir    = self.out_dir.get()
+        fmt        = self.fmt_var.get()
+        quality    = self.quality_var.get().replace("k", "")
+        threading.Thread(
+            target=self._download,
+            args=(url, cookiefile, browser, out_dir, fmt, quality),
+            daemon=True,
+        ).start()
 
-    def _download(self, url: str, cookiefile: str, browser: str) -> None:
+    def _download(self, url: str, cookiefile: str, browser: str,
+                  out_dir: str, fmt: str, quality: str) -> None:
         if not YT_DLP_OK:
             self._log(t("yt_no_ytdlp"))
             self._done_progress(False)
@@ -775,9 +787,6 @@ class YouTubeTab(ctk.CTkFrame):
             self._running = False
             return
 
-        out_dir    = self.out_dir.get()
-        fmt        = self.fmt_var.get()
-        quality    = self.quality_var.get().replace("k", "")
         cookie_str = self._cookie_method_str()
         os.makedirs(out_dir, exist_ok=True)
 
@@ -845,7 +854,9 @@ class YouTubeTab(ctk.CTkFrame):
         if not self._running:
             return
         self._cancel_flag.set()
-        self._running = False
+        # Do NOT set _running = False here; leave it for the worker thread.
+        # Setting it early would allow _start() to spawn a second thread while
+        # yt-dlp is still aborting the download.
         self._btn_cancel.configure(state="disabled")
         self._log(t("yt_cancelling"))
 
