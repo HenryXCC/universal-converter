@@ -98,6 +98,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_gif_fps_label":  "GIF FPS:",
         "vid_fps_auto_hint":  "💡 Selecciona un video para obtener una recomendación automática.",
         "vid_convert_btn":    "⚡  CONVERTIR VIDEO(S)",
+        "vid_gif_pass1":      "🎨 Generando paleta de colores... (paso 1/2)",
+        "vid_gif_pass2":      "🎞 Codificando GIF con paleta... (paso 2/2)",
 
          # diálogos
         "vid_pick_title":     "Seleccionar video(s)",
@@ -290,6 +292,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_gif_fps_label":  "GIF FPS:",
         "vid_fps_auto_hint":  "💡 Select a video to get an automatic recommendation.",
         "vid_convert_btn":    "⚡  CONVERT VIDEO(S)",
+        "vid_gif_pass1":      "🎨 Generating color palette... (pass 1/2)",
+        "vid_gif_pass2":      "🎞 Encoding GIF with palette... (pass 2/2)",
 
          # dialogs
         "vid_pick_title":     "Select video(s)",
