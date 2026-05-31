@@ -346,24 +346,30 @@ class VideoTab(ctk.CTkFrame):
         if not self._files:
             messagebox.showwarning(t("vid_warn_title"), t("vid_warn_msg"))
             return
+        if self._running:           # guard: prevent double-start if still winding down
+            return
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
         self._running = True
         self._btn_cancel.configure(state="normal")
-        threading.Thread(target=self._convert, daemon=True).start()
+        # Read StringVars in the main thread before spawning the worker —
+        # Tkinter StringVar.get() is not thread-safe.
+        _, ext  = self.CONVERSIONS[self.conv_var.get()]
+        out_dir = self.out_dir.get()
+        threading.Thread(target=self._convert, args=(ext, out_dir), daemon=True).start()
 
     def _cancel(self):
         if not self._running:
             return
         self._cancel_flag.set()
-        self._running = False
+        # Do NOT set _running = False here; leave it for the worker thread.
+        # Setting it early would allow _start() to spawn a second thread while
+        # FFmpeg is still being killed and the palette temp file cleaned up.
         self._btn_cancel.configure(state="disabled")
         self._log(t("vid_cancelling"))
 
-    def _convert(self):
-        _, ext  = self.CONVERSIONS[self.conv_var.get()]
-        out_dir = self.out_dir.get()
+    def _convert(self, ext: str, out_dir: str):
         os.makedirs(out_dir, exist_ok=True)
 
         # Snapshot the files list to prevent race condition if user modifies it during conversion
@@ -401,24 +407,61 @@ class VideoTab(ctk.CTkFrame):
                                 _self.progress.set(0.10 + 0.87 * p, l))
 
                 if ext == "gif":
-                    fps    = self.fps_var.get()
-                    vf     = (
-                        f"fps={fps},split[s0][s1];"
-                        "[s0]palettegen=max_colors=256:stats_mode=full[p];"
-                        "[s1][p]paletteuse=dither=floyd_steinberg"
+                    # ─────────────────────────────────────────────────────────
+                    # Two-pass GIF encoding — avoids the OOM crash (-12) caused
+                    # by the single-pass "split" filter, which buffers every
+                    # decoded frame in RAM simultaneously.
+                    #
+                    # Pass 1: read the video once, build a palette PNG on disk.
+                    # Pass 2: read the video again, apply the palette frame by
+                    #          frame → output GIF.  Peak RAM ≈ 2 frames instead
+                    #          of N*resolution*3 bytes.
+                    # ─────────────────────────────────────────────────────────
+                    import tempfile
+                    fps          = self.fps_var.get()
+                    palette_path = os.path.join(
+                        tempfile.gettempdir(), f"{stem}_gif_palette.png"
                     )
-                    ffargs = ["-i", file_path, "-vf", vf, "-loop", "0", dest]
+
+                    self._log(t("vid_gif_pass1"))
+                    vf1 = f"fps={fps},palettegen=max_colors=256:stats_mode=diff"
+                    ok, err_tail = run_ffmpeg(
+                        ["-i", file_path, "-vf", vf1, "-y", palette_path],
+                        duration, None, self._cancel_flag,
+                    )
+
+                    if ok and not self._cancel_flag.is_set():
+                        self._log(t("vid_gif_pass2"))
+                        vf2 = (
+                            f"fps={fps}[v];"
+                            "[v][1:v]paletteuse=dither=floyd_steinberg"
+                        )
+                        ok, err_tail = run_ffmpeg(
+                            ["-i", file_path, "-i", palette_path,
+                             "-lavfi", vf2, "-loop", "0", dest],
+                            duration, prog, self._cancel_flag,
+                        )
+
+                    try:
+                        os.remove(palette_path)
+                    except OSError:
+                        pass
+
                 elif ext in ("mp3", "wav"):
-                    acodec = "libmp3lame" if ext == "mp3" else "pcm_s16le"
-                    ffargs = ["-i", file_path, "-vn", "-acodec", acodec, dest]
+                    acodec   = "libmp3lame" if ext == "mp3" else "pcm_s16le"
+                    ok, err_tail = run_ffmpeg(
+                        ["-i", file_path, "-vn", "-acodec", acodec, dest],
+                        duration, prog, self._cancel_flag,
+                    )
                 else:
                     codec  = _VIDEO_CODEC.get(ext, "libx264")
                     q_args = (["-q:v", "4"] if ext == "avi"
                                else ["-crf", "18", "-preset", "fast"])
-                    ffargs = (["-i", file_path, "-c:v", codec,
-                                "-r", f"{src_fps}"] + q_args + ["-c:a", "copy", dest])
-
-                ok, err_tail = run_ffmpeg(ffargs, duration, prog, self._cancel_flag)
+                    ok, err_tail = run_ffmpeg(
+                        ["-i", file_path, "-c:v", codec, "-r", f"{src_fps}"]
+                        + q_args + ["-c:a", "copy", dest],
+                        duration, prog, self._cancel_flag,
+                    )
 
                 if self._cancel_flag.is_set():
                     self._log(t("vid_cancelled"))
