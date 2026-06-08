@@ -1,11 +1,5 @@
 """
-YouTube audio download tab.
-
-Applied fixes:
-  - ANSI stripping on all error messages.
-  - Native cookie export without browser extensions.
-  - cookiefile takes priority over cookiesfrombrowser.
-  - Thread-safe lambdas with explicit variable capture.
+YouTube audio extraction UI panel.
 """
 import io
 import os
@@ -26,6 +20,7 @@ from tkinter import filedialog, messagebox
 
 from config import (
     ACCENT, ACCENT2, BORDER, ERR, MUTED, OK, TEXT,
+    SURFACE, CARD,
     YT_DLP_OK, _yt_dlp_module,
 )
 from i18n import t
@@ -35,7 +30,6 @@ from widgets import (
     LogBox, ProgressCard, SectionLabel,
 )
 
-# Browsers for native cookie export
 _BROWSERS = ["Ninguno / None", "Chrome", "Firefox", "Edge", "Brave", "Opera", "Safari"]
 _BROWSER_MAP = {
     "Chrome": "chrome", "Firefox": "firefox", "Edge": "edge",
@@ -49,13 +43,10 @@ def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
 
-# Native YouTube cookie export
 def _get_youtube_cookie_db_path(browser: str) -> str | None:
-    """Returns the browser cookie database path or None."""
-    import sys
     home = os.path.expanduser("~")
 
-    paths: dict[str, list[str]] = {
+    paths = {
         "Chrome": [
             os.path.join(home, "AppData", "Local", "Google", "Chrome",
                          "User Data", "Default", "Network", "Cookies"),
@@ -85,15 +76,12 @@ def _get_youtube_cookie_db_path(browser: str) -> str | None:
             os.path.join(home, "AppData", "Roaming", "Opera Software",
                          "Opera Stable", "Cookies"),
         ],
-        "Firefox": [
-            # Firefox uses random profile names; find the first one
-        ],
+        "Firefox": [],
         "Safari": [
             os.path.join(home, "Library", "Cookies", "Cookies.binarycookies"),
         ],
     }
 
-    # Firefox: find the default profile
     if browser == "Firefox":
         ff_base_win = os.path.join(home, "AppData", "Roaming", "Mozilla",
                                    "Firefox", "Profiles")
@@ -115,22 +103,10 @@ def _get_youtube_cookie_db_path(browser: str) -> str | None:
 
 
 def _export_youtube_cookies_to_file(browser: str) -> tuple[str | None, str]:
-    """
-    Exports YouTube cookies from the given browser to a temporary Netscape file.
-
-    Returns:
-        (file_path, "") on success.
-        (None, error_message) on failure.
-    """
     db_path = _get_youtube_cookie_db_path(browser)
     if db_path is None:
         return None, t("yt_cookies_db_not_found", browser=browser)
 
-    # Chrome/Edge/Brave DB may be locked; copy to temp
-    # FIX Bug 2: mktemp() is deprecated and has a race condition (returns a
-    # name without creating the file, another process could claim it before copy).
-    # mkstemp() creates and locks the file atomically; close the fd immediately
-    # since we only need the path for shutil.copy2.
     _tmp_fd, tmp_db = tempfile.mkstemp(suffix=".db")
     try:
         os.close(_tmp_fd)
@@ -157,7 +133,6 @@ def _export_youtube_cookies_to_file(browser: str) -> tuple[str | None, str]:
     if not rows:
         return None, t("yt_cookies_empty", browser=browser)
 
-    # Write in Netscape format
     out_fd, out_path = tempfile.mkstemp(suffix="_yt_cookies.txt")
     try:
         with os.fdopen(out_fd, "w", encoding="utf-8") as f:
@@ -172,10 +147,7 @@ def _export_youtube_cookies_to_file(browser: str) -> tuple[str | None, str]:
 
 
 def _read_firefox_cookies(db_path: str) -> list[tuple]:
-    """Reads YouTube cookies from Firefox's SQLite DB."""
     conn = sqlite3.connect(db_path)
-    # FIX Bug 3: protect connection with try/finally like in
-    # _read_chromium_cookies, so it doesn't stay open on exception.
     try:
         cursor = conn.execute(
             """
@@ -188,8 +160,7 @@ def _read_firefox_cookies(db_path: str) -> list[tuple]:
         )
         rows = []
         for host, path, secure, expiry, name, value in cursor.fetchall():
-            http_only = "FALSE"
-            flag      = "TRUE" if secure else "FALSE"
+            flag = "TRUE" if secure else "FALSE"
             rows.append((host, "TRUE", path, flag, expiry, name, value))
     finally:
         conn.close()
@@ -197,11 +168,7 @@ def _read_firefox_cookies(db_path: str) -> list[tuple]:
 
 
 def _read_chromium_cookies(db_path: str, browser: str) -> list[tuple]:
-    """
-    Reads YouTube cookies from Chromium's DB (Chrome/Edge/Brave/Opera).
-    Attempts to decrypt values when possible; otherwise uses the raw value.
-    """
-    conn   = sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path)
     try:
         cursor = conn.execute(
             """
@@ -219,12 +186,10 @@ def _read_chromium_cookies(db_path: str, browser: str) -> list[tuple]:
 
     rows = []
     for host, path, secure, expires, name, value, enc_value in raw_rows:
-        # Attempt to decrypt (Windows DPAPI / macOS Keychain)
         decoded = value
         if not decoded and enc_value:
             decoded = _try_decrypt(enc_value, browser) or ""
 
-        # Convert Chrome timestamp (microseconds since 1601) to Unix
         try:
             unix_ts = int((expires - 11644473600 * 10**6) / 10**6)
         except Exception:
@@ -236,19 +201,16 @@ def _read_chromium_cookies(db_path: str, browser: str) -> list[tuple]:
 
 
 def _try_decrypt(enc_value: bytes, browser: str) -> str | None:
-    """Attempts to decrypt a Chromium cookie value."""
     import sys
     if not enc_value:
         return None
 
-    # AES-GCM encrypted cookies (v10/v11 prefix — modern Windows and macOS)
     if enc_value[:3] in (b"v10", b"v11"):
         try:
             return _decrypt_aes_gcm(enc_value, browser)
         except Exception:
             pass
 
-    # Fallback: classic Windows DPAPI
     if sys.platform == "win32":
         try:
             import ctypes
@@ -258,8 +220,8 @@ def _try_decrypt(enc_value: bytes, browser: str) -> str | None:
                 _fields_ = [("cbData", ctypes.wintypes.DWORD),
                              ("pbData", ctypes.POINTER(ctypes.c_char))]
 
-            p       = ctypes.create_string_buffer(enc_value, len(enc_value))
-            blobin  = DATA_BLOB(ctypes.sizeof(p), p)
+            p = ctypes.create_string_buffer(enc_value, len(enc_value))
+            blobin = DATA_BLOB(ctypes.sizeof(p), p)
             blobout = DATA_BLOB()
             ctypes.windll.crypt32.CryptUnprotectData(
                 ctypes.byref(blobin), None, None, None, None, 0,
@@ -273,11 +235,10 @@ def _try_decrypt(enc_value: bytes, browser: str) -> str | None:
 
 
 def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
-    """Decrypts cookies with AES-256-GCM using the Local State key."""
     import sys, base64, json
 
     home = os.path.expanduser("~")
-    local_state_paths: dict[str, str] = {
+    local_state_paths = {
         "Chrome": os.path.join(home, "AppData", "Local", "Google", "Chrome",
                                "User Data", "Local State"),
         "Edge":   os.path.join(home, "AppData", "Local", "Microsoft", "Edge",
@@ -288,7 +249,7 @@ def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
                                "Opera Stable", "Local State"),
     }
     ls_path = local_state_paths.get(browser)
-    if not ls_path or not os.path.isfile(ls_path):
+    if not os.path.isfile(ls_path):
         return None
 
     with open(ls_path, "r", encoding="utf-8") as f:
@@ -298,9 +259,8 @@ def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
     if not enc_key_b64:
         return None
 
-    enc_key = base64.b64decode(enc_key_b64)[5:]  # quita prefijo DPAPI
+    enc_key = base64.b64decode(enc_key_b64)[5:]
 
-    # Decrypt master key with DPAPI
     if sys.platform == "win32":
         import ctypes, ctypes.wintypes
 
@@ -308,8 +268,8 @@ def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
             _fields_ = [("cbData", ctypes.wintypes.DWORD),
                          ("pbData", ctypes.POINTER(ctypes.c_char))]
 
-        p       = ctypes.create_string_buffer(enc_key, len(enc_key))
-        blobin  = DATA_BLOB(ctypes.sizeof(p), p)
+        p = ctypes.create_string_buffer(enc_key, len(enc_key))
+        blobin = DATA_BLOB(ctypes.sizeof(p), p)
         blobout = DATA_BLOB()
         if not ctypes.windll.crypt32.CryptUnprotectData(
             ctypes.byref(blobin), None, None, None, None, 0, ctypes.byref(blobout)
@@ -317,12 +277,11 @@ def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
             return None
         master_key = ctypes.string_at(blobout.pbData, blobout.cbData)
     else:
-        return None  # macOS Keychain requiere otro flujo
+        return None
 
-    # Decrypt value with AES-GCM
     try:
         from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-        nonce      = enc_value[3:15]
+        nonce = enc_value[3:15]
         ciphertext = enc_value[15:]
         return AESGCM(master_key).decrypt(nonce, ciphertext, None).decode("utf-8", errors="replace")
     except Exception:
@@ -330,20 +289,19 @@ def _decrypt_aes_gcm(enc_value: bytes, browser: str) -> str | None:
 
 
 class YouTubeTab(ctk.CTkFrame):
-    FORMATS   = ["mp3", "m4a", "opus", "wav", "flac", "aac"]
+    FORMATS = ["mp3", "m4a", "opus", "wav", "flac", "aac"]
     QUALITIES = ["320k", "256k", "192k", "128k", "96k", "64k"]
 
     def __init__(self, master):
         super().__init__(master, fg_color="transparent")
-        self._thumb_ref      = None
-        self._has_yt_info    = False
-        self._cancel_flag    = threading.Event()
-        self._running        = False
-        self._cookies_file   = ctk.StringVar(value="")
-        self._tmp_cookie_file: str | None = None   # generated temporary file
+        self._thumb_ref = None
+        self._has_yt_info = False
+        self._cancel_flag = threading.Event()
+        self._running = False
+        self._cookies_file = ctk.StringVar(value="")
+        self._tmp_cookie_file = None
         self._build()
 
-    # UI helpers
     def _log(self, msg: str) -> None:
         self.after(0, lambda m=msg: self.log.append(m))
 
@@ -353,20 +311,21 @@ class YouTubeTab(ctk.CTkFrame):
     def _done_progress(self, ok: bool) -> None:
         self.after(0, lambda o=ok: self.progress.done(o))
 
-    # Build UI
+    def highlight_drop_zone(self, active: bool):
+        pass
+
     def _build(self):
         self._lbl_title = _reg(
             ctk.CTkLabel(self, text=t("yt_title"), font=HEAD(), text_color=ACCENT), "head"
         )
-        self._lbl_title.pack(pady=(24, 2))
+        self._lbl_title.pack(pady=(32, 2))
         self._lbl_subtitle = _reg(
             ctk.CTkLabel(self, text=t("yt_subtitle"), font=SMALL(), text_color=MUTED), "small"
         )
-        self._lbl_subtitle.pack(pady=(0, 20))
+        self._lbl_subtitle.pack(pady=(0, 24))
 
-        # URL
         uc = Card(self)
-        uc.pack(fill="x", padx=30, pady=6)
+        uc.pack(fill="x", padx=100, pady=6)
         self._lbl_url_section = SectionLabel(uc, text=t("yt_url_section"))
         self._lbl_url_section.pack(anchor="w", padx=16, pady=(14, 6))
         ur = ctk.CTkFrame(uc, fg_color="transparent")
@@ -379,25 +338,22 @@ class YouTubeTab(ctk.CTkFrame):
         ).pack(side="left", fill="x", expand=True)
         GhostButton(ur, text="✕", width=36,
                     command=lambda: self.url_var.set("")).pack(side="left", padx=6)
-        GhostButton(ur, text="🔍 Info", width=90,
+        GhostButton(ur, text="Info", width=90,
                     command=self._fetch_info).pack(side="left")
 
-        # Video info
         ic = Card(self)
-        ic.pack(fill="x", padx=30, pady=6)
+        ic.pack(fill="x", padx=100, pady=6)
         self._lbl_info_section = SectionLabel(ic, text=t("yt_info_section"))
         self._lbl_info_section.pack(anchor="w", padx=16, pady=(14, 6))
         ir = ctk.CTkFrame(ic, fg_color="transparent")
         ir.pack(fill="x", padx=16, pady=(0, 14))
         self.thumb_lbl = ctk.CTkLabel(
             ir, text=t("yt_no_thumb"), width=192, height=108,
-            fg_color=BORDER, corner_radius=6, font=SMALL(), text_color=MUTED,
+            fg_color=SURFACE, corner_radius=10, font=SMALL(), text_color=MUTED,
         )
         self.thumb_lbl.pack(side="left", padx=(0, 16))
-        # FIX Bug 1: fallback blank image to avoid passing image=None
-        # to CTkLabel, which leaves the widget in a broken state (won't show
-        # real images again). Same issue fixed in image_tab.py.
-        _blank_pil = Image.new("RGB", (192, 108), color=(30, 30, 36))
+        
+        _blank_pil = Image.new("RGB", (192, 108), color=(35, 29, 21))
         self._blank_thumb_img = ctk.CTkImage(
             light_image=_blank_pil, dark_image=_blank_pil, size=(192, 108)
         )
@@ -419,9 +375,8 @@ class YouTubeTab(ctk.CTkFrame):
         )
         self.vid_stats.pack(anchor="w")
 
-        # Options
         oc = Card(self)
-        oc.pack(fill="x", padx=30, pady=6)
+        oc.pack(fill="x", padx=100, pady=6)
         self._lbl_options = SectionLabel(oc, text=t("options_section"))
         self._lbl_options.pack(anchor="w", padx=16, pady=(14, 6))
 
@@ -432,23 +387,24 @@ class YouTubeTab(ctk.CTkFrame):
         )
         self._lbl_fmt.pack(side="left")
         self.fmt_var = ctk.StringVar(value="mp3")
-        ctk.CTkOptionMenu(
+        self.fmt_selector = ctk.CTkSegmentedButton(
             row, variable=self.fmt_var, values=self.FORMATS,
-            fg_color=BORDER, button_color=ACCENT, button_hover_color=ACCENT2,
-            text_color=TEXT, font=BODY(), width=110,
-        ).pack(side="left", padx=10)
+            fg_color=SURFACE, selected_color=ACCENT, unselected_color=SURFACE,
+            text_color=TEXT, font=SMALL(), height=34
+        )
+        self.fmt_selector.pack(side="left", fill="x", expand=True, padx=10)
+        
         self._lbl_quality = _reg(
             ctk.CTkLabel(row, text=t("yt_quality_label"), font=BODY(), text_color=TEXT), "body"
         )
-        self._lbl_quality.pack(side="left", padx=(20, 8))
+        self._lbl_quality.pack(side="left", padx=(10, 8))
         self.quality_var = ctk.StringVar(value="192k")
         ctk.CTkOptionMenu(
             row, variable=self.quality_var, values=self.QUALITIES,
-            fg_color=BORDER, button_color=ACCENT, button_hover_color=ACCENT2,
+            fg_color=SURFACE, button_color=ACCENT, button_hover_color=ACCENT2,
             text_color=TEXT, font=BODY(), width=110,
         ).pack(side="left")
 
-        # Cookies section
         ctk.CTkFrame(oc, fg_color=BORDER, height=1).pack(fill="x", padx=16, pady=(8, 10))
         self._lbl_cookies_section = _reg(
             ctk.CTkLabel(oc, text=t("yt_cookies_section"),
@@ -456,7 +412,6 @@ class YouTubeTab(ctk.CTkFrame):
         )
         self._lbl_cookies_section.pack(anchor="w", padx=16, pady=(0, 8))
 
-        # Method 1 — Export directly from browser
         self._lbl_cookies_browser = _reg(
             ctk.CTkLabel(oc, text=t("yt_cookies_label"), font=BODY(), text_color=TEXT), "body"
         )
@@ -467,7 +422,7 @@ class YouTubeTab(ctk.CTkFrame):
         self.browser_var = ctk.StringVar(value=_BROWSERS[0])
         self._menu_browser = ctk.CTkOptionMenu(
             br_row, variable=self.browser_var, values=_BROWSERS,
-            fg_color=BORDER, button_color=ACCENT, button_hover_color=ACCENT2,
+            fg_color=SURFACE, button_color=ACCENT, button_hover_color=ACCENT2,
             text_color=TEXT, font=BODY(), width=150,
         )
         self._menu_browser.pack(side="left")
@@ -480,11 +435,10 @@ class YouTubeTab(ctk.CTkFrame):
         self._lbl_export_status = _reg(
             ctk.CTkLabel(oc, text=t("yt_cookies_export_hint"),
                           font=SMALL(), text_color=MUTED,
-                          justify="left", anchor="w", wraplength=760), "small"
+                          justify="left", anchor="w", wraplength=600), "small"
         )
         self._lbl_export_status.pack(anchor="w", padx=16, pady=(2, 8))
 
-        # Method 2 — manual cookies.txt file
         ctk.CTkFrame(oc, fg_color=BORDER, height=1).pack(fill="x", padx=16, pady=(0, 8))
         cf_row = ctk.CTkFrame(oc, fg_color="transparent")
         cf_row.pack(fill="x", padx=16, pady=(0, 4))
@@ -496,10 +450,10 @@ class YouTubeTab(ctk.CTkFrame):
         self._entry_cookiefile = ctk.CTkEntry(
             cf_row, textvariable=self._cookies_file,
             placeholder_text="cookies.txt",
-            font=SMALL(), fg_color=BORDER, border_color=BORDER, height=30, width=240,
+            font=SMALL(), fg_color=SURFACE, border_color=BORDER, height=30, width=240,
         )
         self._entry_cookiefile.pack(side="left", padx=(10, 6))
-        GhostButton(cf_row, text="📂", width=36, height=30,
+        GhostButton(cf_row, text="...", width=36, height=30,
                     command=self._pick_cookies_file).pack(side="left", padx=(0, 6))
         GhostButton(cf_row, text="✕", width=30, height=30,
                     command=self._clear_cookies_file).pack(side="left")
@@ -507,12 +461,11 @@ class YouTubeTab(ctk.CTkFrame):
         self._lbl_cookiefile_hint = _reg(
             ctk.CTkLabel(oc, text=t("yt_cookiefile_hint"),
                           font=SMALL(), text_color=MUTED,
-                          justify="left", anchor="w", wraplength=760), "small"
+                          justify="left", anchor="w", wraplength=600), "small"
         )
         self._lbl_cookiefile_hint.pack(anchor="w", padx=16, pady=(0, 14))
         self._cookies_file.trace_add("write", self._on_cookiefile_change)
 
-        # Output folder
         or2 = ctk.CTkFrame(oc, fg_color="transparent")
         or2.pack(fill="x", padx=16, pady=(0, 14))
         self._lbl_outdir = _reg(
@@ -526,22 +479,21 @@ class YouTubeTab(ctk.CTkFrame):
                                        command=self._pick_outdir)
         self._btn_browse.pack(side="left")
 
-        # Progress, log, buttons
         self.progress = ProgressCard(self)
-        self.progress.pack(fill="x", padx=30, pady=6)
+        self.progress.pack(fill="x", padx=100, pady=6)
         self.log = LogBox(self, height=120)
-        self.log.pack(fill="x", padx=30, pady=6)
+        self.log.pack(fill="x", padx=100, pady=6)
+        
         br2 = ctk.CTkFrame(self, fg_color="transparent")
-        br2.pack(pady=18)
+        br2.pack(fill="x", padx=100, pady=12)
         self._btn_download = AccentButton(br2, text=t("yt_download_btn"),
-                                          command=self._start, height=44, width=220)
-        self._btn_download.pack(side="left")
+                                          command=self._start, height=46)
+        self._btn_download.pack(side="left", fill="x", expand=True)
         self._btn_cancel = GhostButton(br2, text=t("cancel_btn"),
-                                       command=self._cancel, height=44, width=120)
+                                       command=self._cancel, height=46, width=120)
         self._btn_cancel.configure(state="disabled")
-        self._btn_cancel.pack(side="left", padx=12)
+        self._btn_cancel.pack(side="left", padx=(12, 0))
 
-    # Native cookie export
     def _export_cookies_now(self) -> None:
         browser = self.browser_var.get()
         if browser == _BROWSERS[0]:
@@ -559,7 +511,6 @@ class YouTubeTab(ctk.CTkFrame):
         ).start()
 
     def _do_export_cookies(self, browser: str) -> None:
-        # Clean previous temp file
         if self._tmp_cookie_file and os.path.isfile(self._tmp_cookie_file):
             try:
                 os.unlink(self._tmp_cookie_file)
@@ -570,7 +521,6 @@ class YouTubeTab(ctk.CTkFrame):
         path, err = _export_youtube_cookies_to_file(browser)
         if path:
             self._tmp_cookie_file = path
-            # Register cleanup function to ensure file is deleted on exit
             atexit.register(self._cleanup_tmp_cookie)
             self.after(0, lambda p=path: self._cookies_file.set(p))
             self.after(0, lambda br=browser: self._lbl_export_status.configure(
@@ -582,14 +532,12 @@ class YouTubeTab(ctk.CTkFrame):
                 text=f"✗ {e}", text_color=ERR
             ))
 
-    # Cookiefile callbacks
     def _pick_cookies_file(self) -> None:
         path = filedialog.askopenfilename(
             title=t("yt_cookiefile_pick_title"),
             filetypes=[("Netscape cookies", "*.txt"), ("All", "*.*")],
         )
         if path:
-            # If user selects a manual file, discard the temp one
             self._tmp_cookie_file = None
             self._cookies_file.set(path)
 
@@ -616,10 +564,8 @@ class YouTubeTab(ctk.CTkFrame):
             )
 
     def _get_ydl_opts_base(self, cookiefile: str = "", browser: str = "") -> dict:
-        """Base yt-dlp options. Priority: cookiefile > browser."""
-        opts: dict = {"quiet": True, "no_warnings": True}
+        opts = {"quiet": True, "no_warnings": True}
         if not cookiefile and not browser:
-            # Fallback: read from StringVar (for other callers)
             cookiefile = self._cookies_file.get().strip()
             browser = self.browser_var.get()
         
@@ -633,13 +579,12 @@ class YouTubeTab(ctk.CTkFrame):
     def _cookie_method_str(self) -> str:
         cookiefile = self._cookies_file.get().strip()
         if cookiefile and os.path.isfile(cookiefile):
-            return f"🍪 {os.path.basename(cookiefile)}"
+            return os.path.basename(cookiefile)
         browser = self.browser_var.get()
         if browser != _BROWSERS[0]:
-            return f"🍪 {browser}"
+            return browser
         return ""
 
-    # Live language update
     def refresh_lang(self) -> None:
         self._lbl_title.configure(text=t("yt_title"))
         self._lbl_subtitle.configure(text=t("yt_subtitle"))
@@ -662,20 +607,16 @@ class YouTubeTab(ctk.CTkFrame):
         self._btn_cancel.configure(text=t("cancel_btn"))
         self.progress.refresh_lang()
 
-    # Output directory
     def _pick_outdir(self) -> None:
         d = filedialog.askdirectory()
         if d:
             self.out_dir.set(d)
 
-    # URL validation
     def _is_youtube_url(self, url: str) -> bool:
-        # Accepts: watch, Shorts, Live, Playlists, youtu.be short links
         return bool(re.search(
             r'(youtube\.com/(watch|shorts|live|playlist)|youtu\.be/)', url
         ))
 
-    # Video info
     def _fetch_info(self) -> None:
         url = self.url_var.get().strip()
         if not url:
@@ -690,7 +631,6 @@ class YouTubeTab(ctk.CTkFrame):
         self.vid_stats.configure(text="")
         self.thumb_lbl.configure(image=self._blank_thumb_img, text=t("yt_loading"))
         
-        # Read StringVar values in main thread before spawning daemon
         cookiefile = self._cookies_file.get().strip()
         browser = self.browser_var.get()
         
@@ -705,20 +645,20 @@ class YouTubeTab(ctk.CTkFrame):
                 info = ydl.extract_info(url, download=False)
 
             mins, secs = divmod(int(info.get("duration", 0)), 60)
-            title      = info.get("title", "—")
-            channel    = info.get("channel", info.get("uploader", "—"))
-            views      = f"{info.get('view_count', 0):,}"
-            likes      = info.get("like_count")
-            likes_str  = f"{likes:,}" if likes else "—"
-            thumbs     = info.get("thumbnails") or []
-            thumb_url  = info.get("thumbnail") or (thumbs[-1]["url"] if thumbs else "")
+            title = info.get("title", "—")
+            channel = info.get("channel", info.get("uploader", "—"))
+            views = f"{info.get('view_count', 0):,}"
+            likes = info.get("like_count")
+            likes_str = f"{likes:,}" if likes else "—"
+            thumbs = info.get("thumbnails") or []
+            thumb_url = info.get("thumbnail") or (thumbs[-1]["url"] if thumbs else "")
             stats_text = t("yt_views_str", mins=mins, secs=secs, views=views, likes=likes_str)
 
             self._has_yt_info = True
             _title = title; _chan = channel; _stats = stats_text
             self.after(0, lambda: self.vid_title.configure(text=_title, text_color=TEXT))
             self.after(0, lambda: self.vid_author.configure(
-                text=f"👤  {_chan}", text_color=MUTED))
+                text=f"{_chan}", text_color=MUTED))
             self.after(0, lambda: self.vid_stats.configure(text=_stats, text_color=MUTED))
 
             if thumb_url:
@@ -727,7 +667,7 @@ class YouTubeTab(ctk.CTkFrame):
                                                  headers={"User-Agent": "Mozilla/5.0"})
                     with urllib.request.urlopen(req, timeout=8) as resp:
                         data = resp.read()
-                    pil     = Image.open(io.BytesIO(data)).convert("RGB").resize(
+                    pil = Image.open(io.BytesIO(data)).convert("RGB").resize(
                         (192, 108), Image.LANCZOS)
                     ctk_img = ctk.CTkImage(light_image=pil, dark_image=pil, size=(192, 108))
                     self._thumb_ref = ctk_img
@@ -750,7 +690,6 @@ class YouTubeTab(ctk.CTkFrame):
             self.after(0, lambda: self.thumb_lbl.configure(
                 text=t("yt_no_thumb"), image=self._blank_thumb_img))
 
-    # Download
     def _start(self) -> None:
         url = self.url_var.get().strip()
         if not url:
@@ -759,19 +698,18 @@ class YouTubeTab(ctk.CTkFrame):
         if not self._is_youtube_url(url):
             messagebox.showwarning(t("yt_warn_invalid_title"), t("yt_warn_invalid_msg"))
             return
-        if self._running:           # guard: prevent double-start while winding down
+        if self._running:
             return
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
         self._running = True
         self._btn_cancel.configure(state="normal")
-        # Read ALL StringVars in the main thread — Tkinter StringVar.get() is not thread-safe.
         cookiefile = self._cookies_file.get().strip()
-        browser    = self.browser_var.get()
-        out_dir    = self.out_dir.get()
-        fmt        = self.fmt_var.get()
-        quality    = self.quality_var.get().replace("k", "")
+        browser = self.browser_var.get()
+        out_dir = self.out_dir.get()
+        fmt = self.fmt_var.get()
+        quality = self.quality_var.get().replace("k", "")
         threading.Thread(
             target=self._download,
             args=(url, cookiefile, browser, out_dir, fmt, quality),
@@ -854,18 +792,13 @@ class YouTubeTab(ctk.CTkFrame):
         if not self._running:
             return
         self._cancel_flag.set()
-        # Do NOT set _running = False here; leave it for the worker thread.
-        # Setting it early would allow _start() to spawn a second thread while
-        # yt-dlp is still aborting the download.
         self._btn_cancel.configure(state="disabled")
         self._log(t("yt_cancelling"))
 
     def __del__(self):
-        """Cleans up the temporary cookie file when the instance is destroyed."""
         self._cleanup_tmp_cookie()
     
     def _cleanup_tmp_cookie(self) -> None:
-        """Removes temporary cookie file if it exists."""
         try:
             if hasattr(self, '_tmp_cookie_file') and self._tmp_cookie_file and os.path.isfile(self._tmp_cookie_file):
                 try:

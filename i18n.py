@@ -4,19 +4,17 @@ Supports Spanish (es) and English (en).
 """
 
 _STRINGS: dict[str, dict[str, str]] = {
-    # ESPAÑOL 
     "es": {
-        # App / ventana principal
         "app_title":        "Convertidor de Formatos Universal",
         "app_header":       "CONVERTIDOR UNIVERSAL",
+        "app_header_part1": "Convertidor",
+        "app_header_part2": "Universal",
         "app_subtitle":     "Imagen · Video · YouTube Audio",
         "text_size_label":  "  Texto:",
         "local_proc":       "Procesamiento local",
-        "about_btn":        "ℹ Acerca de",
-        "lang_btn":         "EN 🌐",
+        "about_btn":        "Acerca de",
+        "lang_btn":         "EN",
         "footer_deps":      "Pillow · FFmpeg · yt-dlp",
-
-        # Acerca de
         "about_title": "Acerca de Convertidor Universal",
         "about_text": (
             "Convertidor Universal v1.4\n\n"
@@ -30,24 +28,18 @@ _STRINGS: dict[str, dict[str, str]] = {
             "Todo el procesamiento se realiza localmente.\n"
             "Desarrollado como proyecto de portafolio."
         ),
-
-        # Pestañas
-        "tab_image":   "🖼  Imagen",
-        "tab_video":   "🎬  Video",
-        "tab_youtube": "▶  YouTube",
-
-        # Compartidos
-        "browse":           "📁 Examinar",
+        "tab_image":   "Imagen",
+        "tab_video":   "Video",
+        "tab_youtube": "YouTube",
+        "browse":           "Examinar",
         "out_dir_label":    "Carpeta de salida:",
         "cancel_btn":       "⏹ Cancelar",
         "options_section":  "▸ OPCIONES",
-
-        # ProgressCard
+        "drop_zone_text":   "Arrastra tus archivos aquí\no haz clic para examinar",
+        "drop_zone_active": "Suelta los archivos aquí",
         "progress_ready":     "Listo",
         "progress_completed": "✓ Completado",
         "progress_error":     "✗ Error",
-
-        # Pestaña Imagen 
         "img_title":          "CONVERTIDOR DE IMÁGENES",
         "img_subtitle":       "Convierte múltiples imágenes a distintos formatos",
         "img_format_label":   "Formato destino:",
@@ -63,9 +55,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_no_images":      "Sin imágenes",
         "img_frame_dur":      "Duración por frame:",
         "img_loop_check":     "Repetir (loop infinito)",
-        "img_convert_btn":    "⚡  CONVERTIR IMÁGENES",
-
-         # diálogos
+        "img_convert_btn":    "CONVERTIR IMAGENES",
         "img_pick_title":     "Seleccionar imágenes",
         "img_filetypes":      "Imágenes",
         "img_wrong_fmt_title":"Formato no permitido",
@@ -73,8 +63,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_filetypes_excl": "Imágenes (sin {fmt})",
         "img_warn_title":     "Sin archivos",
         "img_warn_msg":       "Agrega al menos una imagen.",
-
-        # mensajes en log
         "img_processing":     "Procesando {cur}/{total}: {stem}",
         "img_gif_loading":    "Cargando frame {cur}/{total}…",
         "img_gif_saving":     "Guardando GIF…",
@@ -84,10 +72,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_gif_done":       "\n✓ {n} frames · {ms}ms/frame → {dest} ({mb:.2f} MB)",
         "img_summary_ok":     "\n✓ {ok}/{total} convertidas → {out_dir}",
         "img_summary_warn":   "\n⚠ {ok}/{total} convertidas → {out_dir}",
-         "img_frames_total":   "{n} frames · {secs:.1f}s total",
-         "img_frames_zero":    "0 frames",
-
-         # Pestaña Video
+        "img_frames_total":   "{n} frames · {secs:.1f}s total",
+        "img_frames_zero":    "0 frames",
         "vid_title":          "CONVERTIDOR DE VIDEO",
         "vid_subtitle":       "Convierte o extrae audio de archivos de video locales",
         "vid_input_section":  "▸ VIDEO DE ENTRADA",
@@ -96,31 +82,25 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_info_section":   "▸ INFORMACIÓN",
         "vid_info_hint":      "Selecciona un video para ver su información.",
         "vid_gif_fps_label":  "GIF FPS:",
-        "vid_fps_auto_hint":  "💡 Selecciona un video para obtener una recomendación automática.",
-        "vid_convert_btn":    "⚡  CONVERTIR VIDEO(S)",
-        "vid_gif_pass1":      "🎨 Generando paleta de colores... (paso 1/2)",
-        "vid_gif_pass2":      "🎞 Codificando GIF con paleta... (paso 2/2)",
-
-         # diálogos
+        "vid_fps_auto_hint":  "Selecciona un video para obtener una recomendacion automatica.",
+        "vid_convert_btn":    "CONVERTIR VIDEO(S)",
+        "vid_gif_pass1":      "Generando paleta de colores... (paso 1/2)",
+        "vid_gif_pass2":      "Codificando GIF con paleta... (paso 2/2)",
         "vid_pick_title":     "Seleccionar video(s)",
         "vid_filetypes":      "Video",
         "vid_wrong_fmt_title":"Formato incorrecto",
         "vid_wrong_fmt_msg":  "Solo se aceptan archivos {ext}. Ignorados: {files}",
         "vid_warn_title":     "Sin video",
         "vid_warn_msg":       "Selecciona al menos un archivo de video.",
-
-        # mensajes en log / UI
         "vid_files_selected": "{n} archivos seleccionados",
         "vid_cancelling":     "⏹ Cancelando…",
         "vid_cancelled":      "⏹ Cancelado.",
         "vid_done":           "\nProceso finalizado → {out_dir}",
         "vid_failed":         "\n✗ Error al convertir el video.",
-        "vid_mem_hint":       "\n💡 {fps} FPS genera demasiados fotogramas. Reduce los FPS o usa un video más corto.",
+        "vid_mem_hint":       "\n{fps} FPS genera demasiados fotogramas. Reduce los FPS o usa un video mas corto.",
         "vid_processing":     "Procesando {cur}/{total}...",
-
-        # hint de FPS con video cargado
         "vid_fps_hint_src": (
-            "📹 Video fuente: {src_fps:.3f} FPS  →  Recomendado: {rec} FPS  (actual: {fps})\n"
+            "Video fuente: {src_fps:.3f} FPS  →  Recomendado: {rec} FPS  (actual: {fps})\n"
             "↑ Más FPS = más fluido, GIF más pesado.  "
             "↓ Menos FPS = GIF más liviano, más entrecortado.\n"
             "Con {fps} FPS: {fl}, {sz}."
@@ -132,34 +112,26 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_fps_size_mid":     "tamaño moderado",
         "vid_fps_size_low":     "GIF liviano",
         "vid_fps_hint_general": (
-            "💡 ¿Cuántos FPS elegir?\n"
+            "¿Cuantos FPS elegir?\n"
             "↑ Más FPS = GIF más fluido pero más pesado.  "
             "↓ Menos FPS = GIF más liviano pero más entrecortado.\n"
             "Regla general: usa la mitad de los FPS del video original."
         ),
-
-        # info de video probeado
-        "vid_probe_err":      "⚠ No se pudo leer: {e}",
-
-        # Pestaña YouTube 
+        "vid_probe_err":      "No se pudo leer: {e}",
         "yt_title":           "EXTRACTOR DE AUDIO YOUTUBE",
         "yt_subtitle":        "Descarga y extrae el audio de cualquier video de YouTube",
         "yt_url_section":     "▸ URL DEL VIDEO",
         "yt_info_section":    "▸ INFORMACIÓN DEL VIDEO",
         "yt_no_thumb":        "Sin miniatura",
-        "yt_preview_hint":    "Pega una URL y haz clic en 🔍 Info para previsualizar.",
+        "yt_preview_hint":    "Pega una URL y haz clic en Info para previsualizar.",
         "yt_format_label":    "Formato:",
         "yt_quality_label":   "Calidad:",
-        "yt_download_btn":    "⬇  DESCARGAR AUDIO",
-
-        # diálogos
+        "yt_download_btn":    "DESCARGAR AUDIO",
         "yt_warn_no_url_title":  "Sin URL",
         "yt_warn_no_url_msg":    "Pega una URL de YouTube primero.",
         "yt_warn_invalid_title": "URL inválida",
         "yt_warn_invalid_msg":   "Por favor ingresa una URL válida de YouTube.",
-
-        # mensajes en log / UI
-        "yt_fetching":        "🔄 Obteniendo información…",
+        "yt_fetching":        "Obteniendo informacion…",
         "yt_loading":         "Cargando…",
         "yt_no_ytdlp":        "✗ yt-dlp no está instalado. Ejecuta: pip install yt-dlp",
         "yt_connecting":      "Conectando…",
@@ -168,12 +140,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "yt_cancelled":       "⏹ Descarga cancelada.",
         "yt_saved":           "\n✓ Guardado en: {out_dir}",
         "yt_cancelling":      "⏹ Cancelando… (puede tardar unos segundos)",
-        "yt_views_str":       "⏱  {mins}:{secs:02d}     👁  {views} vistas     👍  {likes}",
-
-        # Cookies
-        "yt_cookies_section":          "🍪 AUTENTICACIÓN (necesaria si YouTube bloquea)",
+        "yt_views_str":       "{mins}:{secs:02d}  |  {views} vistas  |  {likes}",
+        "yt_cookies_section":          "AUTENTICACION",
         "yt_cookies_label":            "Exportar cookies del navegador:",
-        "yt_cookies_export_btn":       "⬇ Exportar cookies ahora",
+        "yt_cookies_export_btn":       "Exportar cookies ahora",
         "yt_cookies_export_hint":      "Selecciona tu navegador y haz clic para exportar las cookies de YouTube automáticamente.",
         "yt_cookies_exporting":        "Exportando cookies de {browser}…",
         "yt_cookies_export_ok":        "✓ Cookies de {browser} exportadas — listas para usar.",
@@ -187,30 +157,25 @@ _STRINGS: dict[str, dict[str, str]] = {
         "yt_cookiefile_label":         "O usar archivo cookies.txt manual:",
         "yt_cookiefile_hint":          "Selecciona un archivo cookies.txt en formato Netscape.",
         "yt_cookiefile_pick_title":    "Seleccionar archivo cookies.txt",
-
-        # FFmpeg error translations
         "_ff_err_trans": {
-            "Cannot allocate memory": "Memoria insuficiente para procesar los fotogramas. Reduce los FPS o usa un video más corto.",
-            "Nothing was written into output file": "No se generó archivo de salida porque no se recibieron datos del video.",
+            "Cannot allocate memory": "Memoria insuficiente. Reduce los FPS o usa un video más corto.",
+            "Nothing was written into output file": "No se generó archivo de salida porque no se recibieron datos.",
             "Conversion failed!": "La conversión con FFmpeg falló.",
             "Error while filtering": "Error al aplicar filtros de video.",
             "Task finished with error code": "La tarea de FFmpeg terminó con un código de error.",
         },
     },
-
-    # ENGLISH 
     "en": {
-        # App / main window
         "app_title":        "Universal Format Converter",
         "app_header":       "UNIVERSAL CONVERTER",
+        "app_header_part1": "Universal",
+        "app_header_part2": "Converter",
         "app_subtitle":     "Image · Video · YouTube Audio",
         "text_size_label":  "  Text:",
         "local_proc":       "Local processing",
-        "about_btn":        "ℹ About",
-        "lang_btn":         "ES 🌐",
+        "about_btn":        "About",
+        "lang_btn":         "ES",
         "footer_deps":      "Pillow · FFmpeg · yt-dlp",
-
-        # About
         "about_title": "About Universal Converter",
         "about_text": (
             "Universal Converter v1.4\n\n"
@@ -224,24 +189,18 @@ _STRINGS: dict[str, dict[str, str]] = {
             "All processing is done locally.\n"
             "Developed as a portfolio project."
         ),
-
-        # Tabs
-        "tab_image":   "🖼  Image",
-        "tab_video":   "🎬  Video",
-        "tab_youtube": "▶  YouTube",
-
-        # Shared
-        "browse":           "📁 Browse",
+        "tab_image":   "Image",
+        "tab_video":   "Video",
+        "tab_youtube": "YouTube",
+        "browse":           "Browse",
         "out_dir_label":    "Output folder:",
         "cancel_btn":       "⏹ Cancel",
         "options_section":  "▸ OPTIONS",
-
-        # ProgressCard
+        "drop_zone_text":   "Drag your files here\nor click to browse",
+        "drop_zone_active": "Drop the files here",
         "progress_ready":     "Ready",
         "progress_completed": "✓ Completed",
         "progress_error":     "✗ Error",
-
-        # Image Tab 
         "img_title":          "IMAGE CONVERTER",
         "img_subtitle":       "Convert multiple images to different formats",
         "img_format_label":   "Target format:",
@@ -257,9 +216,7 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_no_images":      "No images",
         "img_frame_dur":      "Frame duration:",
         "img_loop_check":     "Repeat (infinite loop)",
-        "img_convert_btn":    "⚡  CONVERT IMAGES",
-
-         # dialogs
+        "img_convert_btn":    "CONVERT IMAGES",
         "img_pick_title":     "Select images",
         "img_filetypes":      "Images",
         "img_wrong_fmt_title":"Format not allowed",
@@ -267,8 +224,6 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_filetypes_excl": "Images (no {fmt})",
         "img_warn_title":     "No files",
         "img_warn_msg":       "Add at least one image.",
-
-        # log messages
         "img_processing":     "Processing {cur}/{total}: {stem}",
         "img_gif_loading":    "Loading frame {cur}/{total}…",
         "img_gif_saving":     "Saving GIF…",
@@ -278,10 +233,8 @@ _STRINGS: dict[str, dict[str, str]] = {
         "img_gif_done":       "\n✓ {n} frames · {ms}ms/frame → {dest} ({mb:.2f} MB)",
         "img_summary_ok":     "\n✓ {ok}/{total} converted → {out_dir}",
         "img_summary_warn":   "\n⚠ {ok}/{total} converted → {out_dir}",
-         "img_frames_total":   "{n} frames · {secs:.1f}s total",
-         "img_frames_zero":    "0 frames",
-
-         # Video Tab
+        "img_frames_total":   "{n} frames · {secs:.1f}s total",
+        "img_frames_zero":    "0 frames",
         "vid_title":          "VIDEO CONVERTER",
         "vid_subtitle":       "Convert or extract audio from local video files",
         "vid_input_section":  "▸ INPUT VIDEO",
@@ -290,31 +243,25 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_info_section":   "▸ INFORMATION",
         "vid_info_hint":      "Select a video to see its information.",
         "vid_gif_fps_label":  "GIF FPS:",
-        "vid_fps_auto_hint":  "💡 Select a video to get an automatic recommendation.",
-        "vid_convert_btn":    "⚡  CONVERT VIDEO(S)",
-        "vid_gif_pass1":      "🎨 Generating color palette... (pass 1/2)",
-        "vid_gif_pass2":      "🎞 Encoding GIF with palette... (pass 2/2)",
-
-         # dialogs
+        "vid_fps_auto_hint":  "Select a video to get an automatic recommendation.",
+        "vid_convert_btn":    "CONVERT VIDEO(S)",
+        "vid_gif_pass1":      "Generating color palette... (pass 1/2)",
+        "vid_gif_pass2":      "Encoding GIF with palette... (pass 2/2)",
         "vid_pick_title":     "Select video(s)",
         "vid_filetypes":      "Video",
         "vid_wrong_fmt_title":"Wrong format",
         "vid_wrong_fmt_msg":  "Only {ext} files accepted. Skipped: {files}",
         "vid_warn_title":     "No video",
         "vid_warn_msg":       "Select at least one video file.",
-
-        # log / UI messages
         "vid_files_selected": "{n} files selected",
-        "vid_cancelling":     "⏹ Cancelling…",
-        "vid_cancelled":      "⏹ Cancelled.",
+        "vid_cancelling":     "Cancelling…",
+        "vid_cancelled":      "Cancelled.",
         "vid_done":           "\nProcess finished → {out_dir}",
         "vid_failed":         "\n✗ Video conversion failed.",
-        "vid_mem_hint":       "\n💡 {fps} FPS generates too many frames. Lower the FPS or use a shorter video.",
+        "vid_mem_hint":       "\n{fps} FPS generates too many frames. Lower the FPS or use a shorter video.",
         "vid_processing":     "Processing {cur}/{total}...",
-
-        # FPS hint with loaded video
         "vid_fps_hint_src": (
-            "📹 Source video: {src_fps:.3f} FPS  →  Recommended: {rec} FPS  (current: {fps})\n"
+            "Source video: {src_fps:.3f} FPS  →  Recommended: {rec} FPS  (current: {fps})\n"
             "↑ More FPS = smoother, heavier GIF.  "
             "↓ Less FPS = lighter, choppier GIF.\n"
             "With {fps} FPS: {fl}, {sz}."
@@ -326,48 +273,38 @@ _STRINGS: dict[str, dict[str, str]] = {
         "vid_fps_size_mid":     "moderate size",
         "vid_fps_size_low":     "light GIF",
         "vid_fps_hint_general": (
-            "💡 How many FPS to choose?\n"
+            "How many FPS to choose?\n"
             "↑ More FPS = smoother GIF but heavier.  "
             "↓ Less FPS = lighter GIF but choppier.\n"
             "General rule: use half the FPS of the original video."
         ),
-
-        # probed video info
-        "vid_probe_err":      "⚠ Could not read: {e}",
-
-        # YouTube Tab 
+        "vid_probe_err":      "Could not read: {e}",
         "yt_title":           "YOUTUBE AUDIO EXTRACTOR",
         "yt_subtitle":        "Download and extract audio from any YouTube video",
         "yt_url_section":     "▸ VIDEO URL",
         "yt_info_section":    "▸ VIDEO INFORMATION",
         "yt_no_thumb":        "No thumbnail",
-        "yt_preview_hint":    "Paste a URL and click 🔍 Info to preview.",
+        "yt_preview_hint":    "Paste a URL and click Info to preview.",
         "yt_format_label":    "Format:",
         "yt_quality_label":   "Quality:",
-        "yt_download_btn":    "⬇  DOWNLOAD AUDIO",
-
-        # dialogs
+        "yt_download_btn":    "DOWNLOAD AUDIO",
         "yt_warn_no_url_title":  "No URL",
         "yt_warn_no_url_msg":    "Paste a YouTube URL first.",
         "yt_warn_invalid_title": "Invalid URL",
         "yt_warn_invalid_msg":   "Please enter a valid YouTube URL.",
-
-        # log / UI messages
-        "yt_fetching":        "🔄 Fetching information…",
+        "yt_fetching":        "Fetching information…",
         "yt_loading":         "Loading…",
         "yt_no_ytdlp":        "✗ yt-dlp is not installed. Run: pip install yt-dlp",
         "yt_connecting":      "Connecting…",
         "yt_converting":      "Converting…",
         "yt_audio_ready":     "  Download ready, processing audio…",
-        "yt_cancelled":       "⏹ Download cancelled.",
+        "yt_cancelled":       "Download cancelled.",
         "yt_saved":           "\n✓ Saved to: {out_dir}",
-        "yt_cancelling":      "⏹ Cancelling… (may take a few seconds)",
-        "yt_views_str":       "⏱  {mins}:{secs:02d}     👁  {views} views     👍  {likes}",
-
-        # Cookies
-        "yt_cookies_section":          "🍪 AUTHENTICATION (required if YouTube blocks)",
+        "yt_cancelling":      "Cancelling… (may take a few seconds)",
+        "yt_views_str":       "{mins}:{secs:02d}  |  {views} views  |  {likes}",
+        "yt_cookies_section":          "AUTHENTICATION",
         "yt_cookies_label":            "Export browser cookies:",
-        "yt_cookies_export_btn":       "⬇ Export cookies now",
+        "yt_cookies_export_btn":       "Export cookies now",
         "yt_cookies_export_hint":      "Select your browser and click to automatically export your YouTube cookies.",
         "yt_cookies_exporting":        "Exporting cookies from {browser}…",
         "yt_cookies_export_ok":        "✓ {browser} cookies exported — ready to use.",
@@ -381,13 +318,10 @@ _STRINGS: dict[str, dict[str, str]] = {
         "yt_cookiefile_label":         "Or use a manual cookies.txt file:",
         "yt_cookiefile_hint":          "Select a cookies.txt file in Netscape format.",
         "yt_cookiefile_pick_title":    "Select cookies.txt file",
-
-        # FFmpeg error translations (empty — FFmpeg is already in English)
         "_ff_err_trans": {},
     },
 }
 
-# Current language state
 _current_lang: str = "es"
 
 
@@ -402,9 +336,6 @@ def get_lang() -> str:
 
 
 def t(key: str, **kwargs) -> str:
-    """Returns the translated string for the active language.
-    Accepts kwargs to format the string with str.format().
-    """
     s = _STRINGS.get(_current_lang, _STRINGS["es"]).get(key, key)
     if kwargs:
         try:
@@ -415,8 +346,6 @@ def t(key: str, **kwargs) -> str:
 
 
 def translate_ffmpeg_error(line: str) -> str:
-    """If the active language is not English, translates common FFmpeg error
-    phrases to user-friendly messages. Returns empty string if no translation."""
     trans = _STRINGS.get(_current_lang, {}).get("_ff_err_trans", {})
     if not trans:
         return ""

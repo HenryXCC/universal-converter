@@ -13,7 +13,6 @@ import weakref
 
 import config as _cfg
 
-# Widget registration for font scaling
 _all_widgets: list[weakref.ref] = []
 
 
@@ -24,15 +23,17 @@ def _reg(widget, tag: str):
     return widget
 
 
-# Font size helpers
 def _sz(delta: int = 0) -> int:
     return max(7, min(26, _cfg.BASE_SIZE + delta))
 
 
-def HEAD()  -> tuple: return (_cfg.FONT_FAMILY, _sz(+12), "bold")
-def SUB()   -> tuple: return (_cfg.FONT_FAMILY, _sz(+1),  "bold")
-def BODY()  -> tuple: return (_cfg.FONT_FAMILY, _sz(0))
-def SMALL() -> tuple: return (_cfg.FONT_FAMILY, _sz(-1))
+def DISPLAY() -> tuple: return (_cfg.FONT_FAMILY, _sz(+16), "bold")
+def HEAD()    -> tuple: return (_cfg.FONT_FAMILY, _sz(+14), "bold")
+def SUB()     -> tuple: return (_cfg.FONT_FAMILY, _sz(+2),  "bold")
+def BODY()    -> tuple: return (_cfg.FONT_FAMILY, _sz(0))
+def SMALL()   -> tuple: return (_cfg.FONT_FAMILY, _sz(-1))
+
+def MONO()    -> tuple: return (_cfg.FONT_MONO,   _sz(0))
 
 
 def apply_font_scale(delta: int) -> None:
@@ -47,16 +48,17 @@ def apply_font_scale(delta: int) -> None:
         live.append(ref)
         try:
             tag = getattr(w, "_font_tag", None)
-            if   tag == "head":  w.configure(font=HEAD())
-            elif tag == "sub":   w.configure(font=SUB())
-            elif tag == "body":  w.configure(font=BODY())
-            elif tag == "small": w.configure(font=SMALL())
+            if   tag == "head":    w.configure(font=HEAD())
+            elif tag == "display": w.configure(font=DISPLAY())
+            elif tag == "sub":     w.configure(font=SUB())
+            elif tag == "body":    w.configure(font=BODY())
+            elif tag == "small":   w.configure(font=SMALL())
+            elif tag == "mono":    w.configure(font=MONO())
         except Exception:
             pass
     _all_widgets = live
 
 
-# FFprobe
 class FFmpegNotFoundError(RuntimeError):
     """FFmpeg/FFprobe not found on the system."""
 
@@ -115,7 +117,6 @@ def probe_video(path: str) -> dict:
     }
 
 
-# FFmpeg runner with live progress
 def run_ffmpeg(
     args: list[str],
     duration: float,
@@ -199,7 +200,6 @@ def run_ffmpeg(
     return False, "\n".join(err_lines)
 
 
-# GIF FPS recommendation
 def smart_gif_fps(src_fps: float) -> int:
     if src_fps <= 0:
         return 12
