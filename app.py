@@ -528,10 +528,11 @@ class App(*_AppBases):
         title_row = ctk.CTkFrame(titles, fg_color="transparent")
         title_row.pack(anchor="w")
 
-        ctk.CTkLabel(
+        self._lbl_header_base = ctk.CTkLabel(
             title_row, text=t("app_header_part1"),
             font=(FONT_FAMILY, 22, "bold"), text_color=TEXT,
-        ).pack(side="left")
+        )
+        self._lbl_header_base.pack(side="left")
 
         self._lbl_header_accent = ctk.CTkLabel(
             title_row, text=" " + t("app_header_part2"),
@@ -867,6 +868,7 @@ class App(*_AppBases):
         set_lang(new_lang)
 
         self.title(t("app_title"))
+        self._lbl_header_base.configure(text=t("app_header_part1"))
         self._lbl_header_accent.configure(text=" " + t("app_header_part2"))
         self._lbl_app_subtitle.configure(text=t("app_subtitle"))
         self._lbl_text_size.configure(text=t("text_size_label"))
