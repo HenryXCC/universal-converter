@@ -1,11 +1,5 @@
 """
-Video conversion tab.
-
-Applied fixes:
-  - Lambda capture bug in loop: dest/size_mb/err_tail/e are captured
-    as local variables before passing to after(), not by reference.
-  - FFmpegNotFoundError is handled explicitly and shows a clear message.
-  - progress.set() from worker thread uses after() via helpers.
+Video conversion UI panel.
 """
 import os
 import re
@@ -14,7 +8,7 @@ import threading
 import customtkinter as ctk
 from tkinter import filedialog, messagebox
 
-from config import ACCENT, ACCENT2, BORDER, ERR, MUTED, TEXT, _VIDEO_CODEC
+from config import ACCENT, ACCENT2, BORDER, ERR, MUTED, SURFACE, TEXT, _VIDEO_CODEC
 from i18n import t, translate_ffmpeg_error
 from utils import (
     _reg, BODY, SMALL, HEAD,
@@ -22,9 +16,8 @@ from utils import (
 )
 from widgets import (
     AccentButton, Card, GhostButton,
-    LogBox, ProgressCard, SectionLabel,
+    LogBox, ProgressCard, SectionLabel, DropZoneCard,
 )
-
 
 class VideoTab(ctk.CTkFrame):
     CONVERSIONS = {
@@ -39,15 +32,14 @@ class VideoTab(ctk.CTkFrame):
 
     def __init__(self, master):
         super().__init__(master, fg_color="transparent")
-        self._files:       list[str] = []
-        self._src_fps      = 0.0
-        self._duration     = 0.0
-        self._has_probe    = False
-        self._cancel_flag  = threading.Event()
+        self._files = []
+        self._src_fps = 0.0
+        self._duration = 0.0
+        self._has_probe = False
+        self._cancel_flag = threading.Event()
         self._running = False
         self._build()
 
-    # UI helpers (main thread only)
     def _log(self, msg: str) -> None:
         self.after(0, lambda m=msg: self.log.append(m))
 
@@ -57,36 +49,40 @@ class VideoTab(ctk.CTkFrame):
     def _done_progress(self, ok: bool) -> None:
         self.after(0, lambda o=ok: self.progress.done(o))
 
-    # Build UI
+    def highlight_drop_zone(self, active: bool):
+        if hasattr(self, "drop_zone"):
+            self.drop_zone.set_active(active)
+
     def _build(self):
         self._lbl_title = _reg(
             ctk.CTkLabel(self, text=t("vid_title"), font=HEAD(), text_color=ACCENT), "head"
         )
-        self._lbl_title.pack(pady=(24, 2))
+        self._lbl_title.pack(pady=(32, 2))
         self._lbl_subtitle = _reg(
             ctk.CTkLabel(self, text=t("vid_subtitle"), font=SMALL(), text_color=MUTED), "small"
         )
-        self._lbl_subtitle.pack(pady=(0, 20))
+        self._lbl_subtitle.pack(pady=(0, 24))
 
-        # Input
+        self.drop_zone = DropZoneCard(self, command=self._pick_files)
+        self.drop_zone.pack(fill="x", padx=100, pady=(0, 8))
+
         fc = Card(self)
-        fc.pack(fill="x", padx=30, pady=6)
+        fc.pack(fill="x", padx=100, pady=6)
         self._lbl_input_section = SectionLabel(fc, text=t("vid_input_section"))
         self._lbl_input_section.pack(anchor="w", padx=16, pady=(14, 6))
         row = ctk.CTkFrame(fc, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(0, 14))
         self._btn_add = AccentButton(row, text=t("vid_add_btn"),
-                                     command=self._pick_files, width=180)
+                                     command=self._pick_files, width=150, height=34)
         self._btn_add.pack(side="left")
         self.file_label = _reg(
             ctk.CTkLabel(row, text=t("vid_no_file"), font=SMALL(),
-                          text_color=MUTED, wraplength=400, anchor="w"), "small"
+                          text_color=MUTED, wraplength=450, anchor="w"), "small"
         )
         self.file_label.pack(side="left", padx=14)
 
-        # Info
         ic = Card(self)
-        ic.pack(fill="x", padx=30, pady=6)
+        ic.pack(fill="x", padx=100, pady=6)
         self._lbl_info_section = SectionLabel(ic, text=t("vid_info_section"))
         self._lbl_info_section.pack(anchor="w", padx=16, pady=(14, 6))
         self.info_lbl = _reg(
@@ -95,21 +91,19 @@ class VideoTab(ctk.CTkFrame):
         )
         self.info_lbl.pack(anchor="w", padx=16, pady=(0, 14))
 
-        # Options
         oc = Card(self)
-        oc.pack(fill="x", padx=30, pady=6)
+        oc.pack(fill="x", padx=100, pady=6)
         self._lbl_options = SectionLabel(oc, text=t("options_section"))
         self._lbl_options.pack(anchor="w", padx=16, pady=(14, 6))
         row2 = ctk.CTkFrame(oc, fg_color="transparent")
-        row2.pack(fill="x", padx=16, pady=(0, 8))
+        row2.pack(fill="x", padx=16, pady=(0, 12))
         self.conv_var = ctk.StringVar(value=list(self.CONVERSIONS)[0])
         ctk.CTkOptionMenu(
             row2, variable=self.conv_var, values=list(self.CONVERSIONS),
-            fg_color=BORDER, button_color=ACCENT, button_hover_color=ACCENT2,
-            text_color=TEXT, font=BODY(), width=200,
+            fg_color=SURFACE, button_color=ACCENT, button_hover_color=ACCENT2,
+            text_color=TEXT, font=BODY(), width=220, height=34
         ).pack(side="left")
 
-        # FPS control for GIF
         self._fps_wrapper = ctk.CTkFrame(oc, fg_color="transparent")
         self._fps_wrapper.pack(fill="x", padx=16, pady=(0, 4))
         fpr = ctk.CTkFrame(self._fps_wrapper, fg_color="transparent")
@@ -120,8 +114,9 @@ class VideoTab(ctk.CTkFrame):
         self._lbl_gif_fps.pack(side="left")
         self.fps_var = ctk.IntVar(value=12)
         ctk.CTkSlider(
-            fpr, from_=5, to=30, variable=self.fps_var, width=120,
+            fpr, from_=5, to=30, variable=self.fps_var, width=140,
             button_color=ACCENT, button_hover_color=ACCENT2, progress_color=ACCENT,
+            fg_color=SURFACE,
         ).pack(side="left", padx=8)
         self.fps_lbl = _reg(
             ctk.CTkLabel(fpr, text="12", font=BODY(), text_color=ACCENT, width=28), "body"
@@ -134,41 +129,41 @@ class VideoTab(ctk.CTkFrame):
         self.fps_hint = _reg(
             ctk.CTkLabel(self._fps_wrapper, text=t("vid_fps_auto_hint"),
                           font=SMALL(), text_color=MUTED,
-                          justify="left", anchor="w", wraplength=820), "small"
+                          justify="left", anchor="w", wraplength=600), "small"
         )
-        self.fps_hint.pack(anchor="w", pady=(4, 0))
+        self.fps_hint.pack(anchor="w", pady=(4, 8))
 
-        # Output folder
         or3 = ctk.CTkFrame(oc, fg_color="transparent")
-        or3.pack(fill="x", padx=16, pady=(8, 14))
+        or3.pack(fill="x", padx=16, pady=(4, 16))
         self._lbl_outdir = _reg(
             ctk.CTkLabel(or3, text=t("out_dir_label"), font=BODY(), text_color=TEXT), "body"
         )
         self._lbl_outdir.pack(side="left")
         self.out_dir = ctk.StringVar(value=os.path.expanduser("~/Desktop"))
-        ctk.CTkEntry(or3, textvariable=self.out_dir, font=BODY(),
-                     fg_color=BORDER, border_color=ACCENT, width=280).pack(side="left", padx=10)
-        self._btn_browse = GhostButton(or3, text=t("browse"), width=110,
+        ctk.CTkEntry(
+            or3, textvariable=self.out_dir, font=SMALL(),
+            fg_color=SURFACE, border_color=BORDER, height=36
+        ).pack(side="left", fill="x", expand=True, padx=(0, 8))
+        self._btn_browse = GhostButton(or3, text=t("browse"), width=90, height=36,
                                        command=self._pick_outdir)
-        self._btn_browse.pack(side="left")
+        self._btn_browse.pack(side="right")
         self.conv_var.trace_add("write", self._on_conv_change)
 
-        # Progress, log, buttons
         self.progress = ProgressCard(self)
-        self.progress.pack(fill="x", padx=30, pady=6)
+        self.progress.pack(fill="x", padx=100, pady=6)
         self.log = LogBox(self, height=130)
-        self.log.pack(fill="x", padx=30, pady=6)
+        self.log.pack(fill="x", padx=100, pady=6)
+        
         br = ctk.CTkFrame(self, fg_color="transparent")
-        br.pack(pady=18)
+        br.pack(fill="x", padx=100, pady=12)
         self._btn_convert = AccentButton(br, text=t("vid_convert_btn"),
-                                         command=self._start, height=44, width=220)
-        self._btn_convert.pack(side="left")
+                                         command=self._start, height=46)
+        self._btn_convert.pack(side="left", fill="x", expand=True)
         self._btn_cancel = GhostButton(br, text=t("cancel_btn"),
-                                       command=self._cancel, height=44, width=120)
+                                       command=self._cancel, height=46, width=120)
         self._btn_cancel.configure(state="disabled")
-        self._btn_cancel.pack(side="left", padx=12)
+        self._btn_cancel.pack(side="left", padx=(12, 0))
 
-    # Live language update
     def refresh_lang(self) -> None:
         self._lbl_title.configure(text=t("vid_title"))
         self._lbl_subtitle.configure(text=t("vid_subtitle"))
@@ -187,8 +182,9 @@ class VideoTab(ctk.CTkFrame):
         self._btn_convert.configure(text=t("vid_convert_btn"))
         self._btn_cancel.configure(text=t("cancel_btn"))
         self.progress.refresh_lang()
+        if hasattr(self, "drop_zone"):
+            self.drop_zone.refresh_lang()
 
-    # Conversion change
     def _on_conv_change(self, *_):
         src_ext, ext = self.CONVERSIONS[self.conv_var.get()]
         if ext == "gif":
@@ -197,7 +193,6 @@ class VideoTab(ctk.CTkFrame):
         else:
             self._fps_wrapper.pack_forget()
 
-        # Drop any loaded files that don't match the new source format
         wrong = [p for p in self._files if not p.lower().endswith(f".{src_ext}")]
         if wrong:
             self._files = [p for p in self._files if p.lower().endswith(f".{src_ext}")]
@@ -209,7 +204,6 @@ class VideoTab(ctk.CTkFrame):
                 self.file_label.configure(text=t("vid_no_file"), text_color=MUTED)
                 self.info_lbl.configure(text=t("vid_info_hint"), text_color=MUTED)
 
-    # FPS hint
     def _update_fps_hint(self):
         fps = self.fps_var.get()
         if self._src_fps > 0:
@@ -228,11 +222,9 @@ class VideoTab(ctk.CTkFrame):
         else:
             self.fps_hint.configure(text=t("vid_fps_hint_general"), text_color=MUTED)
 
-    # File management
     def _src_ext(self) -> str:
-        """Returns the expected source extension for the current conversion."""
         src, _ = self.CONVERSIONS[self.conv_var.get()]
-        return src  # e.g. "mp4", "avi", "mkv"
+        return src
 
     def _pick_files(self):
         src = self._src_ext()
@@ -292,17 +284,17 @@ class VideoTab(ctk.CTkFrame):
             self.after(0, self._update_fps_hint)
             self.after(0, lambda: self.info_lbl.configure(
                 text=(
-                    f"📄 {_name}\n"
-                    f"📦 {_mb:.2f} MB   ⏱ {_mins}:{_secs:02d}"
-                    f"   🎞 {_fps:.3f} FPS\n"
-                    f"📂 {_path}"
+                    f"{_name}\n"
+                    f"{_mb:.2f} MB   {_mins}:{_secs:02d}"
+                    f"   {_fps:.3f} FPS\n"
+                    f"{_path}"
                 ),
                 text_color=TEXT,
             ))
         except FFmpegNotFoundError as e:
             _e = str(e)
             self.after(0, lambda: self.info_lbl.configure(
-                text=f"⚠ {_e}", text_color=ERR
+                text=f"! {_e}", text_color=ERR
             ))
         except Exception as e:
             _e = str(e)
@@ -315,7 +307,6 @@ class VideoTab(ctk.CTkFrame):
         if d:
             self.out_dir.set(d)
 
-    # Error presentation
     def _clean_ffmpeg_error(self, raw: str) -> str:
         lines = raw.split("\n")
         clean = []
@@ -341,20 +332,17 @@ class VideoTab(ctk.CTkFrame):
             [l for l in lines if l.strip()][-3:]
         )
 
-    # Conversion
     def _start(self):
         if not self._files:
             messagebox.showwarning(t("vid_warn_title"), t("vid_warn_msg"))
             return
-        if self._running:           # guard: prevent double-start if still winding down
+        if self._running:
             return
         self._cancel_flag.clear()
         self.log.clear()
         self.progress.reset()
         self._running = True
         self._btn_cancel.configure(state="normal")
-        # Read StringVars in the main thread before spawning the worker —
-        # Tkinter StringVar.get() is not thread-safe.
         _, ext  = self.CONVERSIONS[self.conv_var.get()]
         out_dir = self.out_dir.get()
         threading.Thread(target=self._convert, args=(ext, out_dir), daemon=True).start()
@@ -363,19 +351,12 @@ class VideoTab(ctk.CTkFrame):
         if not self._running:
             return
         self._cancel_flag.set()
-        # Do NOT set _running = False here; leave it for the worker thread.
-        # Setting it early would allow _start() to spawn a second thread while
-        # FFmpeg is still being killed and the palette temp file cleaned up.
         self._btn_cancel.configure(state="disabled")
         self._log(t("vid_cancelling"))
 
     def _convert(self, ext: str, out_dir: str):
         os.makedirs(out_dir, exist_ok=True)
-
-        # Snapshot the files list to prevent race condition if user modifies it during conversion
         files = list(self._files)
-        
-        # Track conversion success to report correct status
         success = True
 
         for idx, file_path in enumerate(files):
@@ -385,7 +366,6 @@ class VideoTab(ctk.CTkFrame):
             stem = os.path.splitext(os.path.basename(file_path))[0]
             dest = os.path.join(out_dir, f"{stem}.{ext}")
 
-            # Capture loop variables before lambda (safe outside loop)
             _stem = stem
             _ext  = ext
             _idx  = idx
@@ -407,16 +387,6 @@ class VideoTab(ctk.CTkFrame):
                                 _self.progress.set(0.10 + 0.87 * p, l))
 
                 if ext == "gif":
-                    # ─────────────────────────────────────────────────────────
-                    # Two-pass GIF encoding — avoids the OOM crash (-12) caused
-                    # by the single-pass "split" filter, which buffers every
-                    # decoded frame in RAM simultaneously.
-                    #
-                    # Pass 1: read the video once, build a palette PNG on disk.
-                    # Pass 2: read the video again, apply the palette frame by
-                    #          frame → output GIF.  Peak RAM ≈ 2 frames instead
-                    #          of N*resolution*3 bytes.
-                    # ─────────────────────────────────────────────────────────
                     import tempfile
                     fps          = self.fps_var.get()
                     palette_path = os.path.join(
@@ -467,7 +437,6 @@ class VideoTab(ctk.CTkFrame):
                     self._log(t("vid_cancelled"))
                     break
 
-                # FIX: capture loop variables BEFORE after()
                 if ok:
                     _dest   = dest
                     _size   = os.path.getsize(dest) / (1024 * 1024)
@@ -481,7 +450,7 @@ class VideoTab(ctk.CTkFrame):
                 _e = str(e)
                 self._log(f"✗ {_e}")
                 success = False
-                break   # Without FFmpeg it doesn't make sense to continue
+                break
             except Exception as e:
                 _e = str(e)
                 self._log(f"✗ {_e}")

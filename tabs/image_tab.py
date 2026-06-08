@@ -1,10 +1,5 @@
 """
-Image conversion tab.
-
-Applied fixes:
-  - All widget calls from worker threads use self.after() — main thread only.
-  - _convert_animated_gif: progress.set() and log.append() are thread-safe.
-  - _convert: progress.set() and log.append() are thread-safe.
+Image conversion UI panel.
 """
 import os
 import threading
@@ -13,14 +8,13 @@ import customtkinter as ctk
 from PIL import Image
 from tkinter import filedialog, messagebox
 
-from config import ACCENT, ACCENT2, BORDER, MUTED, TEXT
+from config import ACCENT, ACCENT2, BORDER, MUTED, TEXT, CARD, SURFACE
 from i18n import t
 from utils import _reg, BODY, SMALL, HEAD
 from widgets import (
     AccentButton, Card, GhostButton, GifThumbItem,
-    LogBox, ProgressCard, SectionLabel,
+    LogBox, ProgressCard, SectionLabel, DropZoneCard,
 )
-
 
 class ImageTab(ctk.CTkFrame):
     FORMATS = {
@@ -34,14 +28,13 @@ class ImageTab(ctk.CTkFrame):
 
     def __init__(self, master):
         super().__init__(master, fg_color="transparent")
-        self._files:      list[str] = []
-        self._thumb_refs: list      = []
-        self._prev_refs:  list      = []
+        self._files = []
+        self._thumb_refs = []
+        self._prev_refs = []
         self._preview_job = None
         self._preview_idx = 0
         self._build()
 
-    # UI helpers (main thread only)
     def _log(self, msg: str) -> None:
         self.after(0, lambda: self.log.append(msg))
 
@@ -51,103 +44,123 @@ class ImageTab(ctk.CTkFrame):
     def _done_progress(self, ok: bool) -> None:
         self.after(0, lambda: self.progress.done(ok))
 
-    # Build UI
+    def highlight_drop_zone(self, active: bool):
+        if hasattr(self, "drop_zone"):
+            self.drop_zone.set_active(active)
+
     def _build(self):
         self._lbl_title = _reg(
             ctk.CTkLabel(self, text=t("img_title"), font=HEAD(), text_color=ACCENT), "head"
         )
-        self._lbl_title.pack(pady=(24, 2))
+        self._lbl_title.pack(pady=(32, 2))
         self._lbl_subtitle = _reg(
             ctk.CTkLabel(self, text=t("img_subtitle"), font=SMALL(), text_color=MUTED), "small"
         )
-        self._lbl_subtitle.pack(pady=(0, 20))
+        self._lbl_subtitle.pack(pady=(0, 24))
 
-        # Options
         oc = Card(self)
-        oc.pack(fill="x", padx=30, pady=6)
+        oc.pack(fill="x", padx=100, pady=8)
+        
         self._lbl_options = SectionLabel(oc, text=t("options_section"))
-        self._lbl_options.pack(anchor="w", padx=16, pady=(14, 6))
+        self._lbl_options.pack(anchor="w", padx=20, pady=(16, 4))
 
         rf = ctk.CTkFrame(oc, fg_color="transparent")
-        rf.pack(fill="x", padx=16, pady=(0, 8))
+        rf.pack(fill="x", padx=20, pady=4)
+        
         self._lbl_fmt = _reg(
             ctk.CTkLabel(rf, text=t("img_format_label"), font=BODY(), text_color=TEXT), "body"
         )
         self._lbl_fmt.pack(side="left")
+        
         self.fmt_var = ctk.StringVar(value="WebP")
-        ctk.CTkOptionMenu(
+        self.fmt_selector = ctk.CTkSegmentedButton(
             rf, variable=self.fmt_var, values=list(self.FORMATS),
-            fg_color=BORDER, button_color=ACCENT, button_hover_color=ACCENT2,
-            text_color=TEXT, font=BODY(), width=130,
-        ).pack(side="left", padx=12)
+            fg_color=SURFACE, selected_color=ACCENT, unselected_color=SURFACE,
+            text_color=TEXT, font=SMALL(), height=34
+        )
+        self.fmt_selector.pack(side="left", padx=12, fill="x", expand=True)
+
         self._lbl_quality = _reg(
             ctk.CTkLabel(rf, text=t("img_quality_label"), font=BODY(), text_color=TEXT), "body"
         )
-        self._lbl_quality.pack(side="left", padx=(20, 8))
+        self._lbl_quality.pack(side="left", padx=(12, 8))
+        
         self.quality_var = ctk.IntVar(value=85)
         ctk.CTkSlider(
-            rf, from_=1, to=100, variable=self.quality_var, width=130,
+            rf, from_=1, to=100, variable=self.quality_var, width=120,
             button_color=ACCENT, button_hover_color=ACCENT2, progress_color=ACCENT,
-        ).pack(side="left")
+            fg_color=SURFACE,
+        ).pack(side="left", padx=4)
+        
         self.qlabel = _reg(
             ctk.CTkLabel(rf, text="85", font=BODY(), text_color=ACCENT, width=30), "body"
         )
-        self.qlabel.pack(side="left", padx=6)
+        self.qlabel.pack(side="left", padx=4)
         self.quality_var.trace_add(
             "write", lambda *_: self.qlabel.configure(text=str(self.quality_var.get()))
         )
 
         or2 = ctk.CTkFrame(oc, fg_color="transparent")
-        or2.pack(fill="x", padx=16, pady=(4, 14))
+        or2.pack(fill="x", padx=20, pady=(8, 16))
+        
         self._lbl_outdir = _reg(
             ctk.CTkLabel(or2, text=t("out_dir_label"), font=BODY(), text_color=TEXT), "body"
         )
         self._lbl_outdir.pack(side="left")
+        
         self.out_dir = ctk.StringVar(value=os.path.expanduser("~/Desktop"))
-        ctk.CTkEntry(or2, textvariable=self.out_dir, font=BODY(),
-                     fg_color=BORDER, border_color=ACCENT, width=280).pack(side="left", padx=10)
-        self._btn_browse = GhostButton(or2, text=t("browse"), width=110, command=self._pick_outdir)
-        self._btn_browse.pack(side="left")
+        ctk.CTkEntry(or2, textvariable=self.out_dir, font=SMALL(),
+                     fg_color=SURFACE, border_color=BORDER, height=36).pack(side="left", fill="x", expand=True, padx=10)
+        
+        self._btn_browse = GhostButton(or2, text=t("browse"), width=90, height=36, command=self._pick_outdir)
+        self._btn_browse.pack(side="right")
 
-        # Input sections
         self._input_container = ctk.CTkFrame(self, fg_color="transparent")
-        self._input_container.pack(fill="x")
+        self._input_container.pack(fill="x", pady=4)
+        
         self._normal_section = self._build_normal_section()
-        self._gif_section    = self._build_gif_section()
-        self._normal_section.pack(fill="x", padx=30, pady=6)
+        self._gif_section = self._build_gif_section()
+        self._normal_section.pack(fill="x", padx=100, pady=6)
         self.fmt_var.trace_add("write", self._on_fmt_change)
 
-        # Progress, log, button
         self.progress = ProgressCard(self)
-        self.progress.pack(fill="x", padx=30, pady=6)
+        self.progress.pack(fill="x", padx=100, pady=6)
+        
         self.log = LogBox(self, height=110)
-        self.log.pack(fill="x", padx=30, pady=6)
+        self.log.pack(fill="x", padx=100, pady=6)
+        
         self._btn_convert = AccentButton(self, text=t("img_convert_btn"),
                                          command=self._start, height=44)
-        self._btn_convert.pack(pady=18)
+        self._btn_convert.pack(fill="x", padx=100, pady=18)
 
-    def _build_normal_section(self) -> Card:
-        fc = Card(self._input_container)
+    def _build_normal_section(self) -> ctk.CTkFrame:
+        container = ctk.CTkFrame(self._input_container, fg_color="transparent")
+        
+        self.drop_zone = DropZoneCard(container, command=self._pick_files)
+        self.drop_zone.pack(fill="x", pady=(0, 8))
+
+        fc = Card(container)
+        fc.pack(fill="x")
         self._lbl_input_section = SectionLabel(fc, text=t("img_input_section"))
         self._lbl_input_section.pack(anchor="w", padx=16, pady=(14, 6))
         row = ctk.CTkFrame(fc, fg_color="transparent")
         row.pack(fill="x", padx=16, pady=(0, 8))
         self._btn_add_normal = AccentButton(row, text=t("img_add_btn"),
-                                            command=self._pick_files, width=180)
+                                            command=self._pick_files, width=160, height=34)
         self._btn_add_normal.pack(side="left")
         self._btn_clear_normal = GhostButton(row, text=t("img_clear_btn"),
-                                             command=self._clear_files, width=140)
+                                             command=self._clear_files, width=120, height=34)
         self._btn_clear_normal.pack(side="left", padx=8)
         self.file_list = _reg(
-            ctk.CTkTextbox(fc, height=100, font=SMALL(), fg_color="#0A0A0B",
+            ctk.CTkTextbox(fc, height=100, font=SMALL(), fg_color="#050403",
                            text_color=MUTED, border_width=1, border_color=BORDER,
-                           corner_radius=6),
+                           corner_radius=8),
             "small",
         )
         self.file_list.pack(fill="x", padx=16, pady=(0, 14))
         self.file_list.insert("0.0", t("img_no_files"))
         self.file_list.configure(state="disabled")
-        return fc
+        return container
 
     def _build_gif_section(self) -> Card:
         gc = Card(self._input_container)
@@ -156,10 +169,10 @@ class ImageTab(ctk.CTkFrame):
         br = ctk.CTkFrame(gc, fg_color="transparent")
         br.pack(fill="x", padx=16, pady=(0, 8))
         self._btn_add_gif = AccentButton(br, text=t("img_add_btn"),
-                                         command=self._pick_files, width=180)
+                                         command=self._pick_files, width=160, height=34)
         self._btn_add_gif.pack(side="left")
         self._btn_clear_gif = GhostButton(br, text=t("img_clear_all_btn"),
-                                          command=self._clear_files, width=140)
+                                          command=self._clear_files, width=120, height=34)
         self._btn_clear_gif.pack(side="left", padx=8)
 
         content = ctk.CTkFrame(gc, fg_color="transparent")
@@ -167,16 +180,16 @@ class ImageTab(ctk.CTkFrame):
         left = ctk.CTkFrame(content, fg_color="transparent")
         left.pack(side="left", fill="both", expand=True)
         self._gif_scroll = ctk.CTkScrollableFrame(
-            left, height=210, fg_color="#0A0A0B",
+            left, height=210, fg_color="#050403",
             scrollbar_button_color=BORDER, scrollbar_button_hover_color=ACCENT,
-            corner_radius=6, border_width=1, border_color=BORDER,
+            corner_radius=8, border_width=1, border_color=BORDER,
         )
         self._gif_scroll.pack(fill="x")
         _reg(ctk.CTkLabel(self._gif_scroll, text=t("img_gif_hint"),
                            font=SMALL(), text_color=MUTED, justify="center"),
              "small").pack(pady=30)
 
-        right = ctk.CTkFrame(content, fg_color=BORDER, corner_radius=8, width=210)
+        right = ctk.CTkFrame(content, fg_color=SURFACE, corner_radius=10, width=210)
         right.pack(side="right", fill="y", padx=(10, 0))
         right.pack_propagate(False)
         self._lbl_preview_header = _reg(
@@ -186,12 +199,11 @@ class ImageTab(ctk.CTkFrame):
         self._lbl_preview_header.pack(pady=(8, 4))
         self._preview_lbl = ctk.CTkLabel(
             right, text=t("img_no_images"), width=186, height=115,
-            fg_color="#0A0A0B", corner_radius=6, font=SMALL(), text_color=MUTED,
+            fg_color="#050403", corner_radius=8, font=SMALL(), text_color=MUTED,
         )
         self._preview_lbl.pack(padx=6, pady=(0, 4))
-        # Blank image used to clear preview without passing image=None,
-        # which leaves CTkLabel in a broken internal state.
-        _blank_pil = Image.new("RGB", (186, 115), color=(10, 10, 11))
+        
+        _blank_pil = Image.new("RGB", (186, 115), color=(5, 4, 3))
         self._blank_prev_img = ctk.CTkImage(
             light_image=_blank_pil, dark_image=_blank_pil, size=(186, 115)
         )
@@ -211,6 +223,7 @@ class ImageTab(ctk.CTkFrame):
         ctk.CTkSlider(
             dr, from_=50, to=1000, variable=self._frame_dur_var, width=160,
             button_color=ACCENT, button_hover_color=ACCENT2, progress_color=ACCENT,
+            fg_color=SURFACE,
         ).pack(side="left", padx=10)
         self._dur_lbl = _reg(
             ctk.CTkLabel(dr, text="100 ms", font=BODY(), text_color=ACCENT, width=60), "body"
@@ -231,7 +244,6 @@ class ImageTab(ctk.CTkFrame):
         self._chk_loop.pack(side="left")
         return gc
 
-    # Live language update
     def refresh_lang(self) -> None:
         self._lbl_title.configure(text=t("img_title"))
         self._lbl_subtitle.configure(text=t("img_subtitle"))
@@ -251,6 +263,8 @@ class ImageTab(ctk.CTkFrame):
         self._chk_loop.configure(text=t("img_loop_check"))
         self._btn_convert.configure(text=t("img_convert_btn"))
         self.progress.refresh_lang()
+        if hasattr(self, "drop_zone"):
+            self.drop_zone.refresh_lang()
         if not self._files:
             self.file_list.configure(state="normal")
             self.file_list.delete("0.0", "end")
@@ -261,9 +275,7 @@ class ImageTab(ctk.CTkFrame):
             if not self._files:
                 self._preview_lbl.configure(text=t("img_no_images"))
 
-    # Format change
     def _on_fmt_change(self, *_):
-        # Drop any files whose extension matches the new destination format
         allowed = self._allowed_exts()
         wrong = [p for p in self._files if not p.lower().endswith(allowed)]
         if wrong:
@@ -278,7 +290,7 @@ class ImageTab(ctk.CTkFrame):
 
         if self.fmt_var.get() == "GIF":
             self._normal_section.pack_forget()
-            self._gif_section.pack(fill="x", padx=30, pady=6)
+            self._gif_section.pack(fill="x", padx=100, pady=6)
             self._refresh_gif_list()
             if self._files:
                 self._restart_preview()
@@ -290,11 +302,9 @@ class ImageTab(ctk.CTkFrame):
         else:
             self._stop_preview()
             self._gif_section.pack_forget()
-            self._normal_section.pack(fill="x", padx=30, pady=6)
+            self._normal_section.pack(fill="x", padx=100, pady=6)
             self._refresh_normal_list()
 
-    # File management
-    # All supported source extensions, mapped from internal format key to file globs
     _FMT_EXTS = {
         "WEBP": (".webp",),
         "PNG":  (".png",),
@@ -306,9 +316,8 @@ class ImageTab(ctk.CTkFrame):
     }
 
     def _allowed_exts(self) -> tuple[str, ...]:
-        """All source extensions except the currently selected output format."""
-        dest_fmt = self.FORMATS[self.fmt_var.get()]  # e.g. "PNG"
-        exts: list[str] = []
+        dest_fmt = self.FORMATS[self.fmt_var.get()]
+        exts = []
         for fmt, ext_tuple in self._FMT_EXTS.items():
             if fmt != dest_fmt:
                 exts.extend(ext_tuple)
@@ -347,12 +356,12 @@ class ImageTab(ctk.CTkFrame):
 
     def _load_thumb(self, path: str):
         try:
-            img   = Image.open(path).convert("RGB")
+            img = Image.open(path).convert("RGB")
             t_img = img.copy(); t_img.thumbnail((80, 55), Image.LANCZOS)
-            ct    = ctk.CTkImage(light_image=t_img, dark_image=t_img,
+            ct  = ctk.CTkImage(light_image=t_img, dark_image=t_img,
                                  size=(t_img.width, t_img.height))
             p_img = img.copy(); p_img.thumbnail((186, 115), Image.LANCZOS)
-            cp    = ctk.CTkImage(light_image=p_img, dark_image=p_img,
+            cp  = ctk.CTkImage(light_image=p_img, dark_image=p_img,
                                  size=(p_img.width, p_img.height))
         except Exception:
             ct = cp = None
@@ -367,7 +376,6 @@ class ImageTab(ctk.CTkFrame):
         self._refresh_normal_list()
         if self.fmt_var.get() == "GIF":
             self._refresh_gif_list()
-            # FIX: image=None breaks CTkLabel; use blank image instead.
             self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
             self._preview_stats.configure(text=t("img_frames_zero"))
 
@@ -378,7 +386,6 @@ class ImageTab(ctk.CTkFrame):
                 lst.insert(target, lst.pop(idx))
             self._refresh_gif_list()
             self._preview_idx = 0
-            # FIX: restart preview in case it was stopped after a previous operation.
             self._start_preview()
 
     def _remove(self, idx: int):
@@ -387,15 +394,12 @@ class ImageTab(ctk.CTkFrame):
         self._refresh_gif_list()
         if not self._files:
             self._stop_preview()
-            # FIX: image=None breaks CTkLabel; use blank image instead.
             self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
             self._preview_stats.configure(text=t("img_frames_zero"))
         else:
             self._preview_idx = 0
-            # FIX: restart preview in case it was stopped.
             self._start_preview()
 
-    # List refresh
     def _refresh_normal_list(self):
         self.file_list.configure(state="normal")
         self.file_list.delete("0.0", "end")
@@ -426,7 +430,6 @@ class ImageTab(ctk.CTkFrame):
             text=t("img_frames_total", n=n, secs=n * self._frame_dur_var.get() / 1000)
         )
 
-    # Animated preview
     def _restart_preview(self):
         self._preview_idx = 0
         self._start_preview()
@@ -457,7 +460,6 @@ class ImageTab(ctk.CTkFrame):
         if d:
             self.out_dir.set(d)
 
-    # Conversion
     def _start(self):
         if not self._files:
             messagebox.showwarning(t("img_warn_title"), t("img_warn_msg"))
@@ -477,8 +479,6 @@ class ImageTab(ctk.CTkFrame):
 
         quality = self.quality_var.get()
         errors  = 0
-        # FIX: snapshot to avoid RuntimeError if user clears during conversion
-        # (list changed size during iteration).
         files = list(self._files)
         total = len(files)
         for i, path in enumerate(files):
@@ -490,8 +490,6 @@ class ImageTab(ctk.CTkFrame):
                     img = img.convert("RGB")
                 kw = {"quality": quality} if fmt in ("WEBP", "JPEG") else {}
                 img.save(dest, fmt, **kw)
-                # FIX: capture stem/ext explicitly so the lambda doesn't capture
-                # the loop variable by reference
                 _stem, _ext = stem, self.EXT[fmt]
                 self._log(f"✓  {_stem}{_ext}")
             except Exception as e:
@@ -509,7 +507,6 @@ class ImageTab(ctk.CTkFrame):
         self._log(t(key, ok=ok, total=total, out_dir=out_dir))
 
     def _convert_animated_gif(self, out_dir: str):
-        # FIX: snapshot to avoid race condition if user clears during conversion.
         files = list(self._files)
         self._log(t("img_gif_building", n=len(files)))
         imgs  = []
