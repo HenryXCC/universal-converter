@@ -21,13 +21,19 @@ from widgets import (
 
 class VideoTab(ctk.CTkFrame):
     CONVERSIONS = {
-        "MP4  →  GIF": ("mp4", "gif"),
-        "MP4  →  AVI": ("mp4", "avi"),
-        "MP4  →  MKV": ("mp4", "mkv"),
-        "AVI  →  MP4": ("avi", "mp4"),
-        "MKV  →  MP4": ("mkv", "mp4"),
-        "MP4  →  MP3": ("mp4", "mp3"),
-        "MP4  →  WAV": ("mp4", "wav"),
+        "MP4  →  GIF":  ("mp4",  "gif"),
+        "MP4  →  AVI":  ("mp4",  "avi"),
+        "MP4  →  MKV":  ("mp4",  "mkv"),
+        "MP4  →  MOV":  ("mp4",  "mov"),
+        "MP4  →  WMV":  ("mp4",  "wmv"),
+        "MP4  → WebM":  ("mp4",  "webm"),
+        "MP4  →  MP3":  ("mp4",  "mp3"),
+        "MP4  →  WAV":  ("mp4",  "wav"),
+        "AVI  →  MP4":  ("avi",  "mp4"),
+        "MKV  →  MP4":  ("mkv",  "mp4"),
+        "MOV  →  MP4":  ("mov",  "mp4"),
+        "WMV  →  MP4":  ("wmv",  "mp4"),
+        "WebM →  MP4":  ("webm", "mp4"),
     }
 
     def __init__(self, master):
@@ -133,6 +139,35 @@ class VideoTab(ctk.CTkFrame):
         )
         self.fps_hint.pack(anchor="w", pady=(4, 8))
 
+        self._crf_wrapper = ctk.CTkFrame(oc, fg_color="transparent")
+        crf_row = ctk.CTkFrame(self._crf_wrapper, fg_color="transparent")
+        crf_row.pack(fill="x")
+        self._lbl_crf = _reg(
+            ctk.CTkLabel(crf_row, text=t("vid_crf_label"), font=BODY(), text_color=TEXT), "body"
+        )
+        self._lbl_crf.pack(side="left")
+        self.crf_var = ctk.IntVar(value=18)
+        ctk.CTkSlider(
+            crf_row, from_=0, to=51, variable=self.crf_var, width=140,
+            button_color=ACCENT, button_hover_color=ACCENT2, progress_color=ACCENT,
+            fg_color=SURFACE,
+        ).pack(side="left", padx=8)
+        self.crf_lbl = _reg(
+            ctk.CTkLabel(crf_row, text="18", font=BODY(), text_color=ACCENT, width=28), "body"
+        )
+        self.crf_lbl.pack(side="left", padx=4)
+        self.crf_var.trace_add("write", lambda *_: (
+            self.crf_lbl.configure(text=str(self.crf_var.get())),
+            self._update_crf_hint(),
+        ))
+        self.crf_hint = _reg(
+            ctk.CTkLabel(self._crf_wrapper, text=t("vid_crf_hint_high"),
+                          font=SMALL(), text_color=MUTED,
+                          justify="left", anchor="w"), "small"
+        )
+        self.crf_hint.pack(anchor="w", pady=(4, 8))
+        self._crf_wrapper.pack(fill="x", padx=16, pady=(0, 4))
+
         or3 = ctk.CTkFrame(oc, fg_color="transparent")
         or3.pack(fill="x", padx=16, pady=(4, 16))
         self._lbl_outdir = _reg(
@@ -176,9 +211,11 @@ class VideoTab(ctk.CTkFrame):
             self.info_lbl.configure(text=t("vid_info_hint"), text_color=MUTED)
         self._lbl_options.configure(text=t("options_section"))
         self._lbl_gif_fps.configure(text=t("vid_gif_fps_label"))
+        self._lbl_crf.configure(text=t("vid_crf_label"))
         self._lbl_outdir.configure(text=t("out_dir_label"))
         self._btn_browse.configure(text=t("browse"))
         self._update_fps_hint()
+        self._update_crf_hint()
         self._btn_convert.configure(text=t("vid_convert_btn"))
         self._btn_cancel.configure(text=t("cancel_btn"))
         self.progress.refresh_lang()
@@ -189,9 +226,15 @@ class VideoTab(ctk.CTkFrame):
         src_ext, ext = self.CONVERSIONS[self.conv_var.get()]
         if ext == "gif":
             self._fps_wrapper.pack(fill="x", padx=16, pady=(0, 4))
+            self._crf_wrapper.pack_forget()
             self._update_fps_hint()
+        elif ext in ("mp3", "wav"):
+            self._fps_wrapper.pack_forget()
+            self._crf_wrapper.pack_forget()
         else:
             self._fps_wrapper.pack_forget()
+            self._crf_wrapper.pack(fill="x", padx=16, pady=(0, 4))
+            self._update_crf_hint()
 
         wrong = [p for p in self._files if not p.lower().endswith(f".{src_ext}")]
         if wrong:
@@ -221,6 +264,18 @@ class VideoTab(ctk.CTkFrame):
             )
         else:
             self.fps_hint.configure(text=t("vid_fps_hint_general"), text_color=MUTED)
+
+    def _update_crf_hint(self):
+        crf = self.crf_var.get()
+        if crf <= 10:
+            label = t("vid_crf_hint_lossless")
+        elif crf <= 18:
+            label = t("vid_crf_hint_high")
+        elif crf <= 28:
+            label = t("vid_crf_hint_mid")
+        else:
+            label = t("vid_crf_hint_low")
+        self.crf_hint.configure(text=f"CRF {crf}  —  {label}")
 
     def _src_ext(self) -> str:
         src, _ = self.CONVERSIONS[self.conv_var.get()]
@@ -423,10 +478,19 @@ class VideoTab(ctk.CTkFrame):
                         ["-i", file_path, "-vn", "-acodec", acodec, dest],
                         duration, prog, self._cancel_flag,
                     )
+                elif ext == "webm":
+                    crf = self.crf_var.get()
+                    ok, err_tail = run_ffmpeg(
+                        ["-i", file_path, "-c:v", "libvpx-vp9",
+                         "-crf", str(crf), "-b:v", "0",
+                         "-c:a", "libopus", dest],
+                        duration, prog, self._cancel_flag,
+                    )
                 else:
                     codec  = _VIDEO_CODEC.get(ext, "libx264")
-                    q_args = (["-q:v", "4"] if ext == "avi"
-                               else ["-crf", "18", "-preset", "fast"])
+                    crf    = self.crf_var.get()
+                    q_args = (["-q:v", str(max(1, crf // 6 + 1))] if ext == "avi"
+                               else ["-crf", str(crf), "-preset", "fast"])
                     ok, err_tail = run_ffmpeg(
                         ["-i", file_path, "-c:v", codec, "-r", f"{src_fps}"]
                         + q_args + ["-c:a", "copy", dest],

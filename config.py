@@ -56,10 +56,12 @@ if os.name == "nt":
     _POPEN_KW["creationflags"] = 0x08000000
 
 _VIDEO_CODEC: dict[str, str] = {
-    "mp4": "libx264",
-    "avi": "mpeg4",
-    "mkv": "libx264",
-    "mov": "libx264",
+    "mp4":  "libx264",
+    "avi":  "mpeg4",
+    "mkv":  "libx264",
+    "mov":  "libx264",
+    "wmv":  "wmv2",
+    "webm": "libvpx-vp9",
 }
 
 def _find_ffmpeg_bins() -> tuple[str, str]:

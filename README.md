@@ -17,7 +17,7 @@
 ### Features
 
 - **🖼 Image conversion** — Convert between WebP, PNG, JPEG, BMP, TIFF, GIF and ICO. Supports batch conversion, quality control, and animated GIF generation with real-time preview.
-- **🎬 Video conversion** — Convert between MP4, AVI, MKV and MOV using FFmpeg, with a live progress bar and the ability to cancel at any time.
+- **🎬 Video conversion** — Convert between MP4, AVI, MKV, MOV, WMV and WebM using FFmpeg, with quality control (CRF slider), a live progress bar and the ability to cancel at any time.
 - **▶ YouTube audio download** — Download and extract audio as MP3, M4A, OPUS, WAV, FLAC or AAC, with thumbnail preview, title, channel, and duration.
 - **🍪 Cookie export** — Export cookies from your browser or use a manual cookies.txt file for YouTube authentication (required when YouTube blocks downloads).
 - **🌐 Live language switching** — Toggle between Spanish and English with one click, without closing or restarting the app. Loaded files, conversion state, and output folder are preserved.
@@ -183,10 +183,15 @@ convertidor-universal/
 
 ---
 
-## License / Licencia
+*Developed as a portfolio project. All processing is local, no data is sent to the project's own servers. The YouTube tab communicates with YouTube's servers by design to fetch information and download content.*
+
+*FFmpeg is invoked as an independent external process via subprocess (arm's length), which is compatible with FFmpeg's GPL license. FFmpeg's source code is not linked or distributed with this project. The user installs FFmpeg independently and may replace it freely.*
+
+---
+
+## License
 
 Distributed under the **MIT** license. See the `LICENSE` file for details.
-Distribuido bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
 
 ---
 
@@ -195,7 +200,7 @@ Distribuido bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más de
 ### Características
 
 - **🖼 Conversión de imágenes** — Convierte entre WebP, PNG, JPEG, BMP, TIFF, GIF e ICO. Soporta conversión por lotes, control de calidad y generación de GIFs animados con previsualización en tiempo real.
-- **🎬 Conversión de video** — Convierte entre MP4, AVI, MKV y MOV usando FFmpeg con barra de progreso en vivo y posibilidad de cancelar el proceso.
+- **🎬 Conversión de video** — Convierte entre MP4, AVI, MKV, MOV, WMV y WebM usando FFmpeg con control de calidad (slider CRF), barra de progreso en vivo y posibilidad de cancelar el proceso.
 - **▶ Descarga de audio de YouTube** — Descarga y extrae audio en MP3, M4A, OPUS, WAV, FLAC o AAC con vista previa de miniatura, título, canal y duración.
 - **🍪 Exportación de cookies** — Exporta cookies del navegador o usa un archivo cookies.txt para autenticación en YouTube (necesario cuando YouTube bloquea).
 - **🌐 Cambio de idioma en vivo** — Alterna entre español e inglés con un clic, sin cerrar ni reiniciar la aplicación. Los archivos cargados, el estado de la conversión y la carpeta de salida se conservan intactos.
@@ -362,6 +367,12 @@ convertidor-universal/
 
 ---
 
-*Developed as a portfolio project. All processing is local, no data is sent to the project's own servers. The YouTube tab communicates with YouTube's servers by design to fetch information and download content.*
-
 *Desarrollado como proyecto de portafolio. Todo el procesamiento es local, no se envía ningún dato a servidores propios del proyecto. La pestaña de YouTube se comunica con los servidores de YouTube por diseño para obtener información y descargar contenido.*
+
+*FFmpeg se invoca como proceso externo independiente mediante subprocess (arm's length), lo cual es compatible con la licencia GPL de FFmpeg. El código fuente de FFmpeg no se enlaza ni distribuye con este proyecto. El usuario instala FFmpeg de forma independiente y puede sustituirlo libremente.*
+
+---
+
+## Licencia
+
+Distribuido bajo la licencia **MIT**. Consulta el archivo `LICENSE` para más detalles.
