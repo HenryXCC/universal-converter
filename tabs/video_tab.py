@@ -21,13 +21,19 @@ from widgets import (
 
 class VideoTab(ctk.CTkFrame):
     CONVERSIONS = {
-        "MP4  →  GIF": ("mp4", "gif"),
-        "MP4  →  AVI": ("mp4", "avi"),
-        "MP4  →  MKV": ("mp4", "mkv"),
-        "AVI  →  MP4": ("avi", "mp4"),
-        "MKV  →  MP4": ("mkv", "mp4"),
-        "MP4  →  MP3": ("mp4", "mp3"),
-        "MP4  →  WAV": ("mp4", "wav"),
+        "MP4  →  GIF":  ("mp4",  "gif"),
+        "MP4  →  AVI":  ("mp4",  "avi"),
+        "MP4  →  MKV":  ("mp4",  "mkv"),
+        "MP4  →  MOV":  ("mp4",  "mov"),
+        "MP4  →  WMV":  ("mp4",  "wmv"),
+        "MP4  → WebM":  ("mp4",  "webm"),
+        "MP4  →  MP3":  ("mp4",  "mp3"),
+        "MP4  →  WAV":  ("mp4",  "wav"),
+        "AVI  →  MP4":  ("avi",  "mp4"),
+        "MKV  →  MP4":  ("mkv",  "mp4"),
+        "MOV  →  MP4":  ("mov",  "mp4"),
+        "WMV  →  MP4":  ("wmv",  "mp4"),
+        "WebM →  MP4":  ("webm", "mp4"),
     }
 
     def __init__(self, master):
