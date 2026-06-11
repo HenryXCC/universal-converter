@@ -136,7 +136,7 @@ class ImageTab(ctk.CTkFrame):
     def _build_normal_section(self) -> ctk.CTkFrame:
         container = ctk.CTkFrame(self._input_container, fg_color="transparent")
         
-        self.drop_zone = DropZoneCard(container, command=self._pick_files)
+        self.drop_zone = DropZoneCard(container)
         self.drop_zone.pack(fill="x", pady=(0, 8))
 
         fc = Card(container)
