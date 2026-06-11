@@ -69,7 +69,7 @@ class VideoTab(ctk.CTkFrame):
         )
         self._lbl_subtitle.pack(pady=(0, 24))
 
-        self.drop_zone = DropZoneCard(self, command=self._pick_files)
+        self.drop_zone = DropZoneCard(self)
         self.drop_zone.pack(fill="x", padx=100, pady=(0, 8))
 
         fc = Card(self)
