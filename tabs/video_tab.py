@@ -353,9 +353,67 @@ class VideoTab(ctk.CTkFrame):
             ))
         except Exception as e:
             _e = str(e)
-            self.after(0, lambda: self.info_lbl.configure(
-                text=t("vid_probe_err", e=_e), text_color=ERR
-            ))
+            self.after(0, lambda: self._set_info(t("vid_probe_err", e=_e), ERR))
+
+    def _set_info(self, text: str, color: str = TEXT):
+        lines  = text.count("\n") + 1
+        height = max(32, min(lines * 17 + 10, 190))
+        self.info_box.configure(state="normal", text_color=color, height=height)
+        self.info_box.delete("0.0", "end")
+        self.info_box.insert("0.0", text)
+        self.info_box.configure(state="disabled")
+
+    def _probe_multiple(self, paths: list):
+        to_probe  = paths[:10]
+        extra     = len(paths) - len(to_probe)
+        results   = [None] * len(to_probe)
+        lock      = threading.Lock()
+        remaining = [len(to_probe)]
+
+        self._src_fps   = 0.0
+        self._duration  = 0.0
+        self._has_probe = False
+        self._set_info(t("vid_multi_loading", n=len(paths)), MUTED)
+        self._update_fps_hint()
+        self._update_crf_hint()
+
+        def probe_one(idx: int, path: str):
+            try:
+                info         = probe_video(path)
+                size_mb      = os.path.getsize(path) / (1024 * 1024)
+                results[idx] = {
+                    "name": os.path.basename(path),
+                    "mb":   size_mb,
+                    "dur":  info["duration"],
+                    "fps":  info["fps"],
+                    "ok":   True,
+                }
+            except Exception:
+                results[idx] = {"name": os.path.basename(path), "ok": False}
+            with lock:
+                remaining[0] -= 1
+                if remaining[0] == 0:
+                    self.after(0, lambda: self._render_multi_info(results, len(paths), extra))
+
+        for i, path in enumerate(to_probe):
+            threading.Thread(target=probe_one, args=(i, path), daemon=True).start()
+
+    def _render_multi_info(self, results: list, total: int, extra: int):
+        ok       = [r for r in results if r["ok"]]
+        mb_total = sum(r["mb"] for r in ok)
+        lines    = [t("vid_multi_header", n=total, mb=f"{mb_total:.1f}"), ""]
+        for r in results:
+            if r["ok"]:
+                mins, secs = divmod(int(r["dur"]), 60)
+                name = (r["name"][:32] + "…") if len(r["name"]) > 33 else r["name"]
+                lines.append(
+                    f"  {name:<34}  {r['mb']:>7.1f} MB   {mins}:{secs:02d}   {r['fps']:.1f} fps"
+                )
+            else:
+                lines.append(f"  {r['name']}  ·  {t('vid_probe_failed')}")
+        if extra > 0:
+            lines.append(f"\n  {t('vid_multi_more', n=extra)}")
+        self._set_info("\n".join(lines), TEXT)
 
     def _pick_outdir(self):
         d = filedialog.askdirectory()
