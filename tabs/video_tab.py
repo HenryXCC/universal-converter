@@ -11,7 +11,7 @@ from tkinter import filedialog, messagebox
 from config import ACCENT, ACCENT2, BORDER, ERR, MUTED, SURFACE, TEXT, _VIDEO_CODEC
 from i18n import t, translate_ffmpeg_error
 from utils import (
-    _reg, BODY, SMALL, HEAD,
+    _reg, BODY, SMALL, HEAD, MONO,
     FFmpegNotFoundError, probe_video, run_ffmpeg, smart_gif_fps,
 )
 from widgets import (
@@ -81,6 +81,9 @@ class VideoTab(ctk.CTkFrame):
         self._btn_add = AccentButton(row, text=t("vid_add_btn"),
                                      command=self._pick_files, width=150, height=34)
         self._btn_add.pack(side="left")
+        self._btn_clear = GhostButton(row, text=t("vid_clear_btn"),
+                                      command=self._clear_files, width=120, height=34)
+        self._btn_clear.pack(side="left", padx=8)
         self.file_label = _reg(
             ctk.CTkLabel(row, text=t("vid_no_file"), font=SMALL(),
                           text_color=MUTED, wraplength=450, anchor="w"), "small"
@@ -91,11 +94,14 @@ class VideoTab(ctk.CTkFrame):
         ic.pack(fill="x", padx=100, pady=6)
         self._lbl_info_section = SectionLabel(ic, text=t("vid_info_section"))
         self._lbl_info_section.pack(anchor="w", padx=16, pady=(14, 6))
-        self.info_lbl = _reg(
-            ctk.CTkLabel(ic, text=t("vid_info_hint"), font=SMALL(),
-                          text_color=MUTED, justify="left", anchor="w"), "small"
+        self.info_box = ctk.CTkTextbox(
+            ic, font=MONO(), height=32, fg_color="transparent",
+            border_width=0, text_color=MUTED, state="normal",
+            wrap="none", activate_scrollbars=True,
         )
-        self.info_lbl.pack(anchor="w", padx=16, pady=(0, 14))
+        self.info_box.insert("0.0", t("vid_info_hint"))
+        self.info_box.configure(state="disabled")
+        self.info_box.pack(fill="x", padx=12, pady=(0, 14))
 
         oc = Card(self)
         oc.pack(fill="x", padx=100, pady=6)
@@ -204,11 +210,13 @@ class VideoTab(ctk.CTkFrame):
         self._lbl_subtitle.configure(text=t("vid_subtitle"))
         self._lbl_input_section.configure(text=t("vid_input_section"))
         self._btn_add.configure(text=t("vid_add_btn"))
+        self._btn_clear.configure(text=t("vid_clear_btn"))
         if not self._files:
             self.file_label.configure(text=t("vid_no_file"), text_color=MUTED)
         self._lbl_info_section.configure(text=t("vid_info_section"))
+        self.info_box.configure(font=MONO())
         if not self._has_probe:
-            self.info_lbl.configure(text=t("vid_info_hint"), text_color=MUTED)
+            self._set_info(t("vid_info_hint"), MUTED)
         self._lbl_options.configure(text=t("options_section"))
         self._lbl_gif_fps.configure(text=t("vid_gif_fps_label"))
         self._lbl_crf.configure(text=t("vid_crf_label"))
@@ -245,7 +253,7 @@ class VideoTab(ctk.CTkFrame):
             self._refresh_file_list()
             if not self._files:
                 self.file_label.configure(text=t("vid_no_file"), text_color=MUTED)
-                self.info_lbl.configure(text=t("vid_info_hint"), text_color=MUTED)
+                self._set_info(t("vid_info_hint"), MUTED)
 
     def _update_fps_hint(self):
         fps = self.fps_var.get()
@@ -281,6 +289,16 @@ class VideoTab(ctk.CTkFrame):
         src, _ = self.CONVERSIONS[self.conv_var.get()]
         return src
 
+    def _clear_files(self):
+        self._files.clear()
+        self._src_fps   = 0.0
+        self._duration  = 0.0
+        self._has_probe = False
+        self.file_label.configure(text=t("vid_no_file"), text_color=MUTED)
+        self._set_info(t("vid_info_hint"), MUTED)
+        self._update_fps_hint()
+        self._update_crf_hint()
+
     def _pick_files(self):
         src = self._src_ext()
         ext_pattern = f"*.{src}"
@@ -310,6 +328,8 @@ class VideoTab(ctk.CTkFrame):
             threading.Thread(
                 target=self._probe_file, args=(self._files[0],), daemon=True
             ).start()
+        elif len(self._files) > 1:
+            self._probe_multiple(self._files[:])
 
     def _refresh_file_list(self):
         if len(self._files) == 1:
@@ -337,20 +357,16 @@ class VideoTab(ctk.CTkFrame):
             _fps   = self._src_fps
             _path  = path
             self.after(0, self._update_fps_hint)
-            self.after(0, lambda: self.info_lbl.configure(
-                text=(
-                    f"{_name}\n"
-                    f"{_mb:.2f} MB   {_mins}:{_secs:02d}"
-                    f"   {_fps:.3f} FPS\n"
-                    f"{_path}"
-                ),
-                text_color=TEXT,
+            self.after(0, lambda: self._set_info(
+                f"{_name}\n"
+                f"{_mb:.2f} MB   {_mins}:{_secs:02d}"
+                f"   {_fps:.3f} FPS\n"
+                f"{_path}",
+                TEXT,
             ))
         except FFmpegNotFoundError as e:
             _e = str(e)
-            self.after(0, lambda: self.info_lbl.configure(
-                text=f"! {_e}", text_color=ERR
-            ))
+            self.after(0, lambda: self._set_info(f"! {_e}", ERR))
         except Exception as e:
             _e = str(e)
             self.after(0, lambda: self._set_info(t("vid_probe_err", e=_e), ERR))
