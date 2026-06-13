@@ -834,6 +834,8 @@ class App(*_AppBases):
                         args=(video_tab._files[0],),
                         daemon=True,
                     ).start()
+                elif len(video_tab._files) > 1:
+                    video_tab._probe_multiple(video_tab._files[:])
 
     def _on_drop_enter(self, event):
         tab = self._tab_instances.get(self._current_tab)
