@@ -612,9 +612,15 @@ class App(*_AppBases):
             command=self._on_closing,
         ).pack(side="left")
 
-        for _w in (header, logo, titles, title_row):
-            _w.bind("<Button-1>",        self._header_drag_start,  add=True)
-            _w.bind("<Double-Button-1>", self._toggle_maximize,     add=True)
+        def _bind_drag(w, excluded):
+            if w in excluded:
+                return
+            w.bind("<Button-1>",        self._header_drag_start, add=True)
+            w.bind("<Double-Button-1>", self._toggle_maximize,    add=True)
+            for child in w.winfo_children():
+                _bind_drag(child, excluded)
+
+        _bind_drag(header, excluded={wc})
 
     def _build_separator(self):
         import tkinter as _tk
