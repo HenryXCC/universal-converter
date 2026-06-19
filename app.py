@@ -159,6 +159,7 @@ class App(*_AppBases):
             from ctypes import wintypes
 
             WM_SIZE             = 0x0005
+            WM_GETMINMAXINFO    = 0x0024
             WM_WINDOWPOSCHANGED = 0x0047
             WM_NCCALCSIZE       = 0x0083
             WM_NCHITTEST        = 0x0084
@@ -172,9 +173,25 @@ class App(*_AppBases):
             HTBOTTOMLEFT, HTBOTTOMRIGHT = 16, 17
             WM_SETCURSOR                = 0x0020
 
+            class POINT(ctypes.Structure):
+                _fields_ = [("x", ctypes.c_long), ("y", ctypes.c_long)]
+
             class RECT(ctypes.Structure):
                 _fields_ = [("left",   ctypes.c_long), ("top",    ctypes.c_long),
                              ("right",  ctypes.c_long), ("bottom", ctypes.c_long)]
+
+            class MINMAXINFO(ctypes.Structure):
+                _fields_ = [("ptReserved",     POINT),
+                             ("ptMaxSize",      POINT),
+                             ("ptMaxPosition",  POINT),
+                             ("ptMinTrackSize", POINT),
+                             ("ptMaxTrackSize", POINT)]
+
+            class MONITORINFO(ctypes.Structure):
+                _fields_ = [("cbSize",    wintypes.DWORD),
+                             ("rcMonitor", RECT),
+                             ("rcWork",    RECT),
+                             ("dwFlags",   wintypes.DWORD)]
 
             user32 = ctypes.windll.user32
 
@@ -193,6 +210,13 @@ class App(*_AppBases):
             user32.LoadCursorW.restype        = ctypes.c_void_p
             user32.SetCursor.argtypes         = [ctypes.c_void_p]
             user32.SetCursor.restype          = ctypes.c_void_p
+            user32.MonitorFromWindow.argtypes = [ctypes.c_void_p, wintypes.DWORD]
+            user32.MonitorFromWindow.restype  = ctypes.c_void_p
+            user32.GetMonitorInfoW.argtypes   = [ctypes.c_void_p, ctypes.POINTER(MONITORINFO)]
+            user32.GetMonitorInfoW.restype    = wintypes.BOOL
+
+            MONITOR_DEFAULTTONEAREST = 2
+            AUTOHIDE_TASKBAR_GAP = 1
 
             def _lc(n): return user32.LoadCursorW(None, ctypes.c_void_p(n))
             _resize_cur = {
@@ -223,16 +247,38 @@ class App(*_AppBases):
             def _wndproc(hwnd_w, msg, wparam, lparam):
                 hwnd_ptr = ctypes.c_void_p(hwnd_w)
 
-                if msg == WM_NCCALCSIZE and wparam:
+                if msg == WM_GETMINMAXINFO:
                     try:
-                        if user32.IsZoomed(hwnd_ptr):
-                            r = ctypes.cast(lparam, ctypes.POINTER(RECT))
-                            r[0].left   += bx
-                            r[0].top    += by
-                            r[0].right  -= bx
-                            r[0].bottom -= by
+                        monitor = user32.MonitorFromWindow(hwnd_ptr, MONITOR_DEFAULTTONEAREST)
+                        if monitor:
+                            mi = MONITORINFO()
+                            mi.cbSize = ctypes.sizeof(MONITORINFO)
+                            if user32.GetMonitorInfoW(monitor, ctypes.byref(mi)):
+                                mmi = ctypes.cast(lparam, ctypes.POINTER(MINMAXINFO))
+                                work = mi.rcWork
+                                mon = mi.rcMonitor
+
+                                # Usar rcWork evita que la ventana maximizada tape la zona
+                                # reservada por Windows para la barra de tareas, incluyendo
+                                # la franja de activacion cuando esta oculta automaticamente.
+                                mmi[0].ptMaxPosition.x = work.left - mon.left
+                                mmi[0].ptMaxPosition.y = work.top - mon.top
+                                mmi[0].ptMaxSize.x = work.right - work.left
+                                mmi[0].ptMaxSize.y = work.bottom - work.top
+
+                                # Refuerzo para barras auto-ocultas: deja una franja minima
+                                # en el borde inferior si rcWork no la reporta separada.
+                                if work.bottom == mon.bottom:
+                                    mmi[0].ptMaxSize.y = max(1, mmi[0].ptMaxSize.y - AUTOHIDE_TASKBAR_GAP)
+                                return 0
                     except Exception:
                         pass
+
+                if msg == WM_NCCALCSIZE and wparam:
+                    # No reducir el area cliente al estar maximizado.
+                    # WM_GETMINMAXINFO ya limita el tamano de la ventana al area util
+                    # del monitor. Aplicar bx/by aqui crea los huecos visibles en
+                    # los bordes cuando la ventana esta maximizada.
                     return 0
 
                 if msg == WM_NCACTIVATE:
