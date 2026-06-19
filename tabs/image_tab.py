@@ -30,9 +30,14 @@ class ImageTab(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent")
         self._files = []
         self._thumb_refs = []
-        self._prev_refs = []
+        # PIL sources for the GIF preview. Keep originals so the preview can
+        # be re-rendered crisply when the window is resized/maximized.
+        self._prev_pils = []
         self._preview_job = None
+        self._preview_resize_job = None
         self._preview_idx = 0
+        self._preview_img_ref = None
+        self._blank_prev_img = None
         self._build()
 
     def _log(self, msg: str) -> None:
@@ -116,7 +121,7 @@ class ImageTab(ctk.CTkFrame):
         self._btn_browse.pack(side="right")
 
         self._input_container = ctk.CTkFrame(self, fg_color="transparent")
-        self._input_container.pack(fill="x", pady=4)
+        self._input_container.pack(fill="both", expand=True, pady=4)
         
         self._normal_section = self._build_normal_section()
         self._gif_section = self._build_gif_section()
@@ -176,21 +181,21 @@ class ImageTab(ctk.CTkFrame):
         self._btn_clear_gif.pack(side="left", padx=8)
 
         content = ctk.CTkFrame(gc, fg_color="transparent")
-        content.pack(fill="x", padx=16, pady=(0, 8))
+        content.pack(fill="both", expand=True, padx=16, pady=(0, 8))
         left = ctk.CTkFrame(content, fg_color="transparent")
         left.pack(side="left", fill="both", expand=True)
         self._gif_scroll = ctk.CTkScrollableFrame(
-            left, height=210, fg_color="#050403",
+            left, height=260, fg_color="#050403",
             scrollbar_button_color=BORDER, scrollbar_button_hover_color=ACCENT,
             corner_radius=8, border_width=1, border_color=BORDER,
         )
-        self._gif_scroll.pack(fill="x")
+        self._gif_scroll.pack(fill="both", expand=True)
         _reg(ctk.CTkLabel(self._gif_scroll, text=t("img_gif_hint"),
                            font=SMALL(), text_color=MUTED, justify="center"),
              "small").pack(pady=30)
 
-        right = ctk.CTkFrame(content, fg_color=SURFACE, corner_radius=10, width=210)
-        right.pack(side="right", fill="y", padx=(10, 0))
+        right = ctk.CTkFrame(content, fg_color=SURFACE, corner_radius=10, width=320)
+        right.pack(side="right", fill="both", padx=(10, 0))
         right.pack_propagate(False)
         self._lbl_preview_header = _reg(
             ctk.CTkLabel(right, text=t("img_preview_label"), font=SMALL(), text_color=MUTED),
@@ -198,15 +203,12 @@ class ImageTab(ctk.CTkFrame):
         )
         self._lbl_preview_header.pack(pady=(8, 4))
         self._preview_lbl = ctk.CTkLabel(
-            right, text=t("img_no_images"), width=186, height=115,
+            right, text=t("img_no_images"), width=300, height=210,
             fg_color="#050403", corner_radius=8, font=SMALL(), text_color=MUTED,
         )
-        self._preview_lbl.pack(padx=6, pady=(0, 4))
-        
-        _blank_pil = Image.new("RGB", (186, 115), color=(5, 4, 3))
-        self._blank_prev_img = ctk.CTkImage(
-            light_image=_blank_pil, dark_image=_blank_pil, size=(186, 115)
-        )
+        self._preview_lbl.pack(fill="both", expand=True, padx=8, pady=(0, 6))
+        self._preview_lbl.bind("<Configure>", self._on_preview_resize)
+        self._set_empty_preview()
         self._preview_stats = _reg(
             ctk.CTkLabel(right, text="0 frames", font=SMALL(),
                           text_color=MUTED, justify="center"), "small"
@@ -273,7 +275,7 @@ class ImageTab(ctk.CTkFrame):
         if self.fmt_var.get() == "GIF":
             self._refresh_gif_list()
             if not self._files:
-                self._preview_lbl.configure(text=t("img_no_images"))
+                self._set_empty_preview()
 
     def _on_fmt_change(self, *_):
         allowed = self._allowed_exts()
@@ -282,22 +284,21 @@ class ImageTab(ctk.CTkFrame):
             keep_files = [p for p in self._files if p.lower().endswith(allowed)]
             keep_thumbs = [t for p, t in zip(self._files, self._thumb_refs)
                            if p.lower().endswith(allowed)]
-            keep_prevs  = [pr for p, pr in zip(self._files, self._prev_refs)
+            keep_prevs  = [pr for p, pr in zip(self._files, self._prev_pils)
                            if p.lower().endswith(allowed)]
             self._files       = keep_files
             self._thumb_refs  = keep_thumbs
-            self._prev_refs   = keep_prevs
+            self._prev_pils   = keep_prevs
 
         if self.fmt_var.get() == "GIF":
             self._normal_section.pack_forget()
-            self._gif_section.pack(fill="x", padx=100, pady=6)
+            self._gif_section.pack(fill="both", expand=True, padx=100, pady=6)
             self._refresh_gif_list()
             if self._files:
                 self._restart_preview()
             else:
                 self._stop_preview()
-                self._preview_lbl.configure(image=self._blank_prev_img,
-                                            text=t("img_no_images"))
+                self._set_empty_preview()
                 self._preview_stats.configure(text=t("img_frames_zero"))
         else:
             self._stop_preview()
@@ -360,41 +361,39 @@ class ImageTab(ctk.CTkFrame):
             t_img = img.copy(); t_img.thumbnail((80, 55), Image.LANCZOS)
             ct  = ctk.CTkImage(light_image=t_img, dark_image=t_img,
                                  size=(t_img.width, t_img.height))
-            p_img = img.copy(); p_img.thumbnail((186, 115), Image.LANCZOS)
-            cp  = ctk.CTkImage(light_image=p_img, dark_image=p_img,
-                                 size=(p_img.width, p_img.height))
+            cp = img.copy()
         except Exception:
             ct = cp = None
         self._thumb_refs.append(ct)
-        self._prev_refs.append(cp)
+        self._prev_pils.append(cp)
 
     def _clear_files(self):
         self._stop_preview()
         self._files.clear()
         self._thumb_refs.clear()
-        self._prev_refs.clear()
+        self._prev_pils.clear()
         self._refresh_normal_list()
         if self.fmt_var.get() == "GIF":
             self._refresh_gif_list()
-            self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
+            self._set_empty_preview()
             self._preview_stats.configure(text=t("img_frames_zero"))
 
     def _move(self, idx: int, d: int):
         target = idx + d
         if 0 <= target < len(self._files):
-            for lst in (self._files, self._thumb_refs, self._prev_refs):
+            for lst in (self._files, self._thumb_refs, self._prev_pils):
                 lst.insert(target, lst.pop(idx))
             self._refresh_gif_list()
             self._preview_idx = 0
             self._start_preview()
 
     def _remove(self, idx: int):
-        for lst in (self._files, self._thumb_refs, self._prev_refs):
+        for lst in (self._files, self._thumb_refs, self._prev_pils):
             lst.pop(idx)
         self._refresh_gif_list()
         if not self._files:
             self._stop_preview()
-            self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
+            self._set_empty_preview()
             self._preview_stats.configure(text=t("img_frames_zero"))
         else:
             self._preview_idx = 0
@@ -434,18 +433,65 @@ class ImageTab(ctk.CTkFrame):
         self._preview_idx = 0
         self._start_preview()
 
+    def _preview_box_size(self) -> tuple[int, int]:
+        w = max(1, self._preview_lbl.winfo_width())
+        h = max(1, self._preview_lbl.winfo_height())
+        if w <= 1 or h <= 1:
+            return 300, 210
+        return w, h
+
+    def _fit_preview_image(self, img: Image.Image) -> ctk.CTkImage:
+        box_w, box_h = self._preview_box_size()
+        preview = img.copy()
+        preview.thumbnail((box_w, box_h), Image.LANCZOS)
+        return ctk.CTkImage(
+            light_image=preview,
+            dark_image=preview,
+            size=(preview.width, preview.height),
+        )
+
+    def _show_preview_frame(self, idx: int) -> None:
+        if not self._prev_pils:
+            self._set_empty_preview()
+            return
+        img = self._prev_pils[idx % len(self._prev_pils)]
+        if img is None:
+            self._preview_lbl.configure(image="", text=t("img_no_images"))
+            return
+        self._preview_img_ref = self._fit_preview_image(img)
+        self._preview_lbl.configure(image=self._preview_img_ref, text="")
+
+    def _set_empty_preview(self) -> None:
+        # Keep the empty preview visually consistent with the current widget size.
+        w, h = self._preview_box_size() if hasattr(self, "_preview_lbl") else (300, 210)
+        blank = Image.new("RGB", (w, h), color=(5, 4, 3))
+        self._blank_prev_img = ctk.CTkImage(
+            light_image=blank, dark_image=blank, size=(w, h)
+        )
+        self._preview_lbl.configure(image=self._blank_prev_img, text=t("img_no_images"))
+
+    def _on_preview_resize(self, event=None) -> None:
+        if self._preview_resize_job:
+            self.after_cancel(self._preview_resize_job)
+        self._preview_resize_job = self.after(80, self._redraw_preview)
+
+    def _redraw_preview(self) -> None:
+        self._preview_resize_job = None
+        if self._prev_pils:
+            self._show_preview_frame((self._preview_idx - 1) % len(self._prev_pils))
+        else:
+            self._set_empty_preview()
+
     def _start_preview(self):
         self._stop_preview()
-        if self._prev_refs:
+        if self._prev_pils:
             self._tick_preview()
 
     def _tick_preview(self):
-        if not self._prev_refs:
+        if not self._prev_pils:
             return
-        ref = self._prev_refs[self._preview_idx % len(self._prev_refs)]
-        if ref:
-            self._preview_lbl.configure(image=ref, text="")
-        self._preview_idx = (self._preview_idx + 1) % max(1, len(self._prev_refs))
+        self._show_preview_frame(self._preview_idx)
+        self._preview_idx = (self._preview_idx + 1) % max(1, len(self._prev_pils))
         self._preview_job = self.after(
             max(50, self._frame_dur_var.get()), self._tick_preview
         )
@@ -454,6 +500,9 @@ class ImageTab(ctk.CTkFrame):
         if self._preview_job:
             self.after_cancel(self._preview_job)
             self._preview_job = None
+        if self._preview_resize_job:
+            self.after_cancel(self._preview_resize_job)
+            self._preview_resize_job = None
 
     def _pick_outdir(self):
         d = filedialog.askdirectory()
